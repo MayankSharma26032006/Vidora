@@ -1,1 +1,144 @@
 @import "tailwindcss";
+
+/* ─── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: #3f3f46; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+/* ─── Base ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #09090b;
+  color: #e4e4e7;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* ─── Focus rings (keyboard nav) ───────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #EF9F27;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* remove focus ring for mouse users */
+:focus:not(:focus-visible) { outline: none; }
+
+/* ─── Selection ─────────────────────────────────────────────────── */
+::selection {
+  background: rgba(239, 159, 39, 0.25);
+  color: #fff;
+}
+
+/* ─── Images ────────────────────────────────────────────────────── */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ─── Inputs ────────────────────────────────────────────────────── */
+input, textarea, select, button {
+  font-family: inherit;
+}
+
+input[type="file"] { display: none; }
+
+/* ─── Transitions (respect reduced motion) ─────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Utility: hide scrollbar but keep scroll ───────────────────── */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* ─── Utility: line clamp ───────────────────────────────────────── */
+.line-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+.line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.line-clamp-3 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+
+/* ─── Animations ────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fadeIn      { animation: fadeIn 0.2s ease-out forwards; }
+.animate-slideIn     { animation: slideInRight 0.2s ease-out forwards; }
+.animate-scaleIn     { animation: scaleIn 0.15s ease-out forwards; }
+
+/* ─── Skeleton shimmer ──────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #27272a 25%, #3f3f46 50%, #27272a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* ─── Glass card ────────────────────────────────────────────────── */
+.glass {
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ─── Responsive typography ─────────────────────────────────────── */
+h1 { font-size: clamp(1.25rem, 2.5vw, 1.875rem); font-weight: 700; line-height: 1.2; }
+h2 { font-size: clamp(1.1rem, 2vw, 1.5rem);   font-weight: 600; line-height: 1.3; }
+h3 { font-size: clamp(1rem, 1.5vw, 1.25rem);  font-weight: 600; line-height: 1.4; }
+
+/* ─── Mobile-first layout helpers ───────────────────────────────── */
+@media (max-width: 768px) {
+  /* Sidebar collapses on mobile */
+  .sidebar-mobile-hidden { display: none; }
+
+  /* Full width cards on mobile */
+  .mobile-full { width: 100% !important; }
+
+  /* Touch targets minimum 44px */
+  button, a, [role="button"] { min-height: 36px; }
+}
+
+/* ─── Tablet adjustments ────────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .tablet-grid-2 { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* ─── Page transition ───────────────────────────────────────────── */
+.page-enter {
+  animation: fadeIn 0.25s ease-out forwards;
+}

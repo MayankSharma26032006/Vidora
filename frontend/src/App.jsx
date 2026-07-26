@@ -14,6 +14,7 @@ import Login from "./pages/Login/Login"
 import Register from "./pages/Register/Register"
 import NotFound from "./pages/NotFound/NotFound"
 import Notifications from "./pages/Notifications/Notifications"
+import Posts from "./pages/Posts/Posts"
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
         <Route path="/register"          element={<Register />} />
         <Route path="/notifications"     element={<Notifications />} />
         <Route path="*"                  element={<NotFound />} />
+        <Route path="/community" element={<Posts />} />
       </Routes>
     </BrowserRouter>
   )
