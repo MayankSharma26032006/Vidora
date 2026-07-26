@@ -1,55 +1,27 @@
 import { useState } from "react"
 import { RiMoreLine, RiPlayCircleLine, RiBookmarkLine, RiShareLine } from "react-icons/ri"
-
-function formatViews(views) {
-  if (views >= 1_000_000) return `${(views / 1_000_000).toFixed(1)}M`
-  if (views >= 1_000) return `${(views / 1_000).toFixed(1)}K`
-  return String(views)
-}
-
-function formatDuration(seconds) {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = seconds % 60
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-  return `${m}:${String(s).padStart(2, "0")}`
-}
-
-function formatTimeAgo(dateString) {
-  const now = new Date()
-  const date = new Date(dateString)
-  const diff = Math.floor((now - date) / 1000)
-
-  if (diff < 60) return "just now"
-  if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`
-  const days = Math.floor(diff / 86400)
-  if (diff < 604800) return `${days} ${days === 1 ? "day" : "days"} ago`
-  const weeks = Math.floor(diff / 604800)
-  if (diff < 2592000) return `${weeks} ${weeks === 1 ? "week" : "weeks"} ago`
-  const months = Math.floor(diff / 2592000)
-  if (diff < 31536000) return `${months} ${months === 1 ? "month" : "months"} ago`
-  return `${Math.floor(diff / 31536000)} years ago`
-}
+import { formatViews, formatDuration, formatTimeAgo } from "../../utils/formatters"
 
 function ContextMenu({ onClose }) {
   const items = [
-    { icon: RiPlayCircleLine, label: "Add to queue" },
+    { icon: RiPlayCircleLine, label: "Add to queue"    },
     { icon: RiBookmarkLine,   label: "Save to playlist" },
-    { icon: RiShareLine,      label: "Share" },
+    { icon: RiShareLine,      label: "Share"            },
   ]
 
   return (
     <div
+      role="menu"
       className="absolute right-0 top-8 w-44 bg-zinc-900 border border-white/[0.08] rounded-xl shadow-2xl shadow-black/60 overflow-hidden z-20"
       onMouseLeave={onClose}
     >
       {items.map((item) => (
         <button
           key={item.label}
+          role="menuitem"
           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors"
         >
-          <item.icon className="text-[15px] shrink-0" />
+          <item.icon className="text-[15px] shrink-0" aria-hidden="true" />
           {item.label}
         </button>
       ))}
@@ -70,15 +42,17 @@ function Thumbnail({ thumbnail, duration, title }) {
         <img
           src={thumbnail}
           alt={title}
+          loading="lazy"
+          decoding="async"
           className={`w-full h-full object-cover transition-transform duration-500 ${hovered ? "scale-105" : "scale-100"}`}
         />
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
-          <RiPlayCircleLine className="text-zinc-600 text-4xl" />
+          <RiPlayCircleLine className="text-zinc-600 text-4xl" aria-hidden="true" />
         </div>
       )}
 
-      <div className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${hovered ? "opacity-100" : "opacity-0"}`} />
+      <div className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${hovered ? "opacity-100" : "opacity-0"}`} aria-hidden="true" />
 
       {duration !== undefined && (
         <span className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded-md bg-black/80 text-white text-[11px] font-medium tracking-wide">
@@ -87,7 +61,7 @@ function Thumbnail({ thumbnail, duration, title }) {
       )}
 
       {hovered && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
           <div className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center">
             <RiPlayCircleLine className="text-white text-2xl" />
           </div>
@@ -112,42 +86,42 @@ function Avatar({ src, name, size = "md" }) {
       <img
         src={src}
         alt={name}
+        loading="lazy"
         className={`${sizeClasses[size]} rounded-full object-cover shrink-0 bg-zinc-700`}
       />
     )
   }
 
   return (
-    <div className={`${sizeClasses[size]} rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-semibold shrink-0`}>
+    <div
+      aria-label={name}
+      className={`${sizeClasses[size]} rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-semibold shrink-0`}
+    >
       {initials}
     </div>
   )
 }
 
-export default function VideoCard({
-  video = {},
-  variant = "default",
-}) {
+export default function VideoCard({ video = {}, variant = "default" }) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const {
-    title       = "Untitled video",
-    thumbnail   = null,
-    duration    = 0,
-    views       = 0,
-    createdAt   = new Date().toISOString(),
-    owner       = {},
+    title     = "Untitled video",
+    thumbnail = null,
+    duration  = 0,
+    views     = 0,
+    createdAt = new Date().toISOString(),
+    owner     = {},
   } = video
 
   const { fullname = "Unknown", username = "", avatar = null } = owner
 
   if (variant === "horizontal") {
     return (
-      <div className="flex gap-3 group">
+      <article className="flex gap-3 group">
         <div className="w-40 shrink-0">
           <Thumbnail thumbnail={thumbnail} duration={duration} title={title} />
         </div>
-
         <div className="flex flex-col justify-between flex-1 min-w-0 py-0.5">
           <div>
             <h3 className="text-sm font-medium text-zinc-100 line-clamp-2 leading-snug group-hover:text-white transition-colors">
@@ -158,45 +132,44 @@ export default function VideoCard({
               {formatViews(views)} views · {formatTimeAgo(createdAt)}
             </p>
           </div>
-
           <div className="relative self-start">
             <button
               onClick={() => setMenuOpen((p) => !p)}
+              aria-label="More options"
+              aria-expanded={menuOpen}
               className="text-zinc-600 hover:text-zinc-300 transition-colors"
             >
-              <RiMoreLine className="text-[17px]" />
+              <RiMoreLine className="text-[17px]" aria-hidden="true" />
             </button>
             {menuOpen && <ContextMenu onClose={() => setMenuOpen(false)} />}
           </div>
         </div>
-      </div>
+      </article>
     )
   }
 
   return (
-    <div className="flex flex-col gap-3 group cursor-pointer">
+    <article className="flex flex-col gap-3 group cursor-pointer">
       <Thumbnail thumbnail={thumbnail} duration={duration} title={title} />
-
       <div className="flex gap-2.5">
         <Avatar src={avatar} name={fullname} />
-
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-1">
             <h3 className="text-sm font-medium text-zinc-100 line-clamp-2 leading-snug group-hover:text-white transition-colors">
               {title}
             </h3>
-
             <div className="relative shrink-0">
               <button
                 onClick={(e) => { e.stopPropagation(); setMenuOpen((p) => !p) }}
+                aria-label="More options"
+                aria-expanded={menuOpen}
                 className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-zinc-200 transition-all p-0.5 rounded"
               >
-                <RiMoreLine className="text-[16px]" />
+                <RiMoreLine className="text-[16px]" aria-hidden="true" />
               </button>
               {menuOpen && <ContextMenu onClose={() => setMenuOpen(false)} />}
             </div>
           </div>
-
           <p className="text-xs text-zinc-500 mt-1 hover:text-zinc-300 transition-colors truncate">
             {username ? `@${username}` : fullname}
           </p>
@@ -205,6 +178,6 @@ export default function VideoCard({
           </p>
         </div>
       </div>
-    </div>
+    </article>
   )
 }

@@ -6,7 +6,6 @@ import {
   RiThumbUpLine, RiThumbUpFill,
   RiShareLine, RiBookmarkLine,
   RiMoreLine, RiSendPlaneLine,
-  RiUserLine,
 } from "react-icons/ri"
 
 const MOCK_VIDEO = {
@@ -334,7 +333,7 @@ function Description({ text }) {
 }
 
 export default function Watch() {
-  const [video, setVideo] = useState(MOCK_VIDEO)
+  const video = MOCK_VIDEO
   const [liked, setLiked] = useState(false)
   const [subscribed, setSubscribed] = useState(false)
   const [saved, setSaved] = useState(false)

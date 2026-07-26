@@ -2,8 +2,7 @@ import { useState } from "react"
 import Sidebar from "../../components/sidebar/Sidebar"
 import Navbar from "../../components/navbar/Navbar"
 import VideoCard from "../../components/cards/VideoCard"
-import { RiFireLine, RiSparklingLine, RiCompassLine } from "react-icons/ri"
-
+import { RiFireLine, RiSparklingLine } from "react-icons/ri"
 const CATEGORIES = [
   "All",
   "Music",
@@ -198,7 +197,6 @@ function SkeletonGrid() {
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All")
-  const [loading] = useState(false)
 
   const featured = MOCK_VIDEOS[0]
   const trending = MOCK_VIDEOS.slice(1, 4)
