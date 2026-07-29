@@ -3,6 +3,8 @@ import Sidebar from "../../components/sidebar/Sidebar"
 import Navbar from "../../components/navbar/Navbar"
 import VideoCard from "../../components/cards/VideoCard"
 import { RiFireLine, RiSparklingLine } from "react-icons/ri"
+
+
 const CATEGORIES = [
   "All",
   "Music",
@@ -141,7 +143,6 @@ function FeaturedBanner({ video }) {
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
-
       <div className="absolute bottom-0 left-0 p-7 max-w-xl">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-medium mb-3">
           <RiFireLine className="text-[13px]" />
@@ -205,32 +206,23 @@ export default function Home() {
   return (
     <div className="flex min-h-screen bg-zinc-950">
       <Sidebar />
-
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Navbar />
-
         <main className="flex-1 px-6 py-6 overflow-y-auto">
           <FeaturedBanner video={featured} />
-
           <div className="mb-7">
             <CategoryPills active={activeCategory} onChange={setActiveCategory} />
           </div>
-
-          {loading ? (
-            <SkeletonGrid />
-          ) : (
-            <>
-              <section className="mb-10">
-                <SectionHeader icon={RiFireLine} title="Trending" />
-                <VideoGrid videos={trending} />
-              </section>
-
-              <section>
-                <SectionHeader icon={RiSparklingLine} title="For you" />
-                <VideoGrid videos={forYou} />
-              </section>
-            </>
-          )}
+          <>
+            <section className="mb-10">
+              <SectionHeader icon={RiFireLine} title="Trending" />
+              <VideoGrid videos={trending} />
+            </section>
+            <section>
+              <SectionHeader icon={RiSparklingLine} title="For you" />
+              <VideoGrid videos={forYou} />
+            </section>
+          </>
         </main>
       </div>
     </div>

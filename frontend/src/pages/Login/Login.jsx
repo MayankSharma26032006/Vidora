@@ -1,5 +1,7 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { RiEyeLine, RiEyeOffLine, RiCheckLine } from "react-icons/ri"
+import { useAuth } from "../../context/AuthContext"
 
 export default function Login() {
   const [email, setEmail]       = useState("")
@@ -9,12 +11,23 @@ export default function Login() {
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState("")
 
-  function handleSubmit(e) {
+  const { login } = useAuth()
+  const navigate  = useNavigate()
+
+  async function handleSubmit(e) {
     e.preventDefault()
     if (!email || !password) { setError("Please fill in all fields."); return }
     setError("")
     setLoading(true)
-    setTimeout(() => setLoading(false), 1500)
+
+    try {
+      await login(email, password)
+      navigate("/")
+    } catch (err) {
+      setError(err.response?.data?.message || "Invalid email or password.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -88,6 +101,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                autoComplete="email"
                 className="w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-zinc-900 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-amber-500/40 transition-colors"
               />
             </div>
@@ -100,6 +114,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
+                  autoComplete="current-password"
                   className="w-full px-4 pr-11 py-3 rounded-xl border border-white/[0.08] bg-zinc-900 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-amber-500/40 transition-colors"
                 />
                 <button type="button" onClick={() => setShowPass(p => !p)} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300 transition-colors">
