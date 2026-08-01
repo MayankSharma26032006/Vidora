@@ -298,5 +298,5 @@ The app will run at `http://localhost:5173`.
 This is currently a solo learning/portfolio project, but suggestions and issues are welcome — feel free to open an issue or fork the repo.
 
 ## 👤 Author
-Mayank Sharma
+Mayank
 [GitHub](https://github.com/MayankSharma26032006/Vidora) · [LinkedIn](http://www.linkedin.com/in/mayank-sharma-tech)
