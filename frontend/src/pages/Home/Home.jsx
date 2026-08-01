@@ -1,105 +1,13 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Sidebar from "../../components/sidebar/Sidebar"
 import Navbar from "../../components/navbar/Navbar"
 import VideoCard from "../../components/cards/VideoCard"
 import { RiFireLine, RiSparklingLine } from "react-icons/ri"
-
+import api from "../../services/api"
 
 const CATEGORIES = [
-  "All",
-  "Music",
-  "Coding",
-  "Travel",
-  "Cooking",
-  "Gaming",
-  "Fitness",
-  "Podcasts",
-  "Recently uploaded",
-  "New to you",
-]
-
-const MOCK_VIDEOS = [
-  {
-    _id: "1",
-    title: "Building a warm analog beat from scratch (no plugins)",
-    thumbnail: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=600&q=80",
-    duration: 843,
-    views: 184200,
-    createdAt: new Date(Date.now() - 2 * 86400 * 1000).toISOString(),
-    owner: { fullname: "Nova Reyes", username: "novasound", avatar: null },
-  },
-  {
-    _id: "2",
-    title: "Solo hiking the Dolomites for 7 days — full journey",
-    thumbnail: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80",
-    duration: 1102,
-    views: 421900,
-    createdAt: new Date(Date.now() - 7 * 86400 * 1000).toISOString(),
-    owner: { fullname: "Marco Levi", username: "marcolevi", avatar: null },
-  },
-  {
-    _id: "3",
-    title: "How I mix vocals to sit in a dense track",
-    thumbnail: "https://images.unsplash.com/photo-1519508234439-4f23643125c1?w=600&q=80",
-    duration: 967,
-    views: 74200,
-    createdAt: new Date(Date.now() - 14 * 86400 * 1000).toISOString(),
-    owner: { fullname: "Nova Reyes", username: "novasound", avatar: null },
-  },
-  {
-    _id: "4",
-    title: "The complete guide to building REST APIs with Node.js",
-    thumbnail: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&q=80",
-    duration: 754,
-    views: 48200,
-    createdAt: new Date(Date.now() - 3 * 86400 * 1000).toISOString(),
-    owner: { fullname: "Mayank Sharma", username: "mayank", avatar: null },
-  },
-  {
-    _id: "5",
-    title: "Iceland ring road in 10 days — what no one tells you",
-    thumbnail: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600&q=80",
-    duration: 1574,
-    views: 310000,
-    createdAt: new Date(Date.now() - 30 * 86400 * 1000).toISOString(),
-    owner: { fullname: "Sara Bloom", username: "sarabloom", avatar: null },
-  },
-  {
-    _id: "6",
-    title: "MongoDB aggregation pipelines explained simply",
-    thumbnail: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&q=80",
-    duration: 482,
-    views: 22100,
-    createdAt: new Date(Date.now() - 10 * 86400 * 1000).toISOString(),
-    owner: { fullname: "Mayank Sharma", username: "mayank", avatar: null },
-  },
-  {
-    _id: "7",
-    title: "Making authentic Neapolitan pizza at home — step by step",
-    thumbnail: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&q=80",
-    duration: 621,
-    views: 93400,
-    createdAt: new Date(Date.now() - 5 * 86400 * 1000).toISOString(),
-    owner: { fullname: "Giulia Romano", username: "giuliaeats", avatar: null },
-  },
-  {
-    _id: "8",
-    title: "React hooks every developer should actually know",
-    thumbnail: "https://images.unsplash.com/photo-1633356122102-3fe601e05bd2?w=600&q=80",
-    duration: 1447,
-    views: 156000,
-    createdAt: new Date(Date.now() - 21 * 86400 * 1000).toISOString(),
-    owner: { fullname: "Dev Patel", username: "devpatel", avatar: null },
-  },
-  {
-    _id: "9",
-    title: "Morning run routine that changed my life — 5am club",
-    thumbnail: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80",
-    duration: 334,
-    views: 67800,
-    createdAt: new Date(Date.now() - 4 * 86400 * 1000).toISOString(),
-    owner: { fullname: "Lena Kraft", username: "lenakraft", avatar: null },
-  },
+  "All", "Music", "Coding", "Travel", "Cooking",
+  "Gaming", "Fitness", "Podcasts", "Recently uploaded", "New to you",
 ]
 
 function CategoryPills({ active, onChange }) {
@@ -109,13 +17,7 @@ function CategoryPills({ active, onChange }) {
         <button
           key={cat}
           onClick={() => onChange(cat)}
-          className={`
-            shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-150
-            ${active === cat
-              ? "bg-white text-zinc-950"
-              : "bg-white/[0.07] text-zinc-400 hover:bg-white/[0.12] hover:text-zinc-200"
-            }
-          `}
+          className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-150 ${active === cat ? "bg-white text-zinc-950" : "bg-white/[0.07] text-zinc-400 hover:bg-white/[0.12] hover:text-zinc-200"}`}
         >
           {cat}
         </button>
@@ -134,6 +36,7 @@ function SectionHeader({ icon: Icon, title }) {
 }
 
 function FeaturedBanner({ video }) {
+  if (!video) return null
   return (
     <div className="relative w-full rounded-2xl overflow-hidden h-64 mb-8 group cursor-pointer">
       <img
@@ -148,11 +51,9 @@ function FeaturedBanner({ video }) {
           <RiFireLine className="text-[13px]" />
           Featured today
         </span>
-        <h1 className="text-white text-2xl font-semibold leading-snug mb-2">
-          {video.title}
-        </h1>
+        <h1 className="text-white text-2xl font-semibold leading-snug mb-2">{video.title}</h1>
         <p className="text-zinc-400 text-sm mb-4">
-          {video.owner.fullname} · {(video.views / 1000).toFixed(1)}K views · 2 days ago
+          {video.owner?.fullname} · {((video.views || 0) / 1000).toFixed(1)}K views
         </p>
         <button className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-zinc-950 text-sm font-semibold hover:bg-zinc-100 transition-colors">
           ▶ Watch now
@@ -198,31 +99,60 @@ function SkeletonGrid() {
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All")
+  const [videos, setVideos]                 = useState([])
+  const [loading, setLoading]               = useState(true)
+  const [error, setError]                   = useState("")
 
-  const featured = MOCK_VIDEOS[0]
-  const trending = MOCK_VIDEOS.slice(1, 4)
-  const forYou   = MOCK_VIDEOS.slice(4)
+  useEffect(() => {
+    fetchVideos()
+  }, [])
+
+  async function fetchVideos() {
+    try {
+      setLoading(true)
+      const res = await api.get("/videos", {
+        params: { page: 1, limit: 20, sortBy: "createdAt", sortType: "desc" }
+      })
+      setVideos(res.data.data.docs || [])
+    } catch {
+      setError("Failed to load videos.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const featured = videos[0] || null
+  const trending = videos.slice(1, 4)
+  const forYou   = videos.slice(4)
 
   return (
-    <div className="flex min-h-screen bg-zinc-950">
+    <div className="flex h-screen overflow-hidden bg-zinc-950">
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Navbar />
         <main className="flex-1 px-6 py-6 overflow-y-auto">
-          <FeaturedBanner video={featured} />
-          <div className="mb-7">
-            <CategoryPills active={activeCategory} onChange={setActiveCategory} />
-          </div>
-          <>
-            <section className="mb-10">
-              <SectionHeader icon={RiFireLine} title="Trending" />
-              <VideoGrid videos={trending} />
-            </section>
-            <section>
-              <SectionHeader icon={RiSparklingLine} title="For you" />
-              <VideoGrid videos={forYou} />
-            </section>
-          </>
+
+          {loading ? (
+            <SkeletonGrid />
+          ) : error ? (
+            <div className="flex items-center justify-center py-20 text-zinc-600 text-sm">{error}</div>
+          ) : (
+            <>
+              <FeaturedBanner video={featured} />
+              <div className="mb-7">
+                <CategoryPills active={activeCategory} onChange={setActiveCategory} />
+              </div>
+              <section className="mb-10">
+                <SectionHeader icon={RiFireLine} title="Trending" />
+                <VideoGrid videos={trending} />
+              </section>
+              <section>
+                <SectionHeader icon={RiSparklingLine} title="For you" />
+                <VideoGrid videos={forYou} />
+              </section>
+            </>
+          )}
+
         </main>
       </div>
     </div>

@@ -1,19 +1,24 @@
 import { useState, useRef } from "react"
+import { useNavigate } from "react-router-dom"
 import { RiEyeLine, RiEyeOffLine, RiCheckLine, RiUploadLine, RiCloseLine } from "react-icons/ri"
+import { useAuth } from "../../context/AuthContext"
 
 export default function Register() {
-  const [fullname, setFullname]   = useState("")
-  const [username, setUsername]   = useState("")
-  const [email, setEmail]         = useState("")
-  const [password, setPassword]   = useState("")
-  const [confirm, setConfirm]     = useState("")
-  const [showPass, setShowPass]   = useState(false)
-  const [showConf, setShowConf]   = useState(false)
-  const [avatar, setAvatar]       = useState(null)
-  const [preview, setPreview]     = useState(null)
-  const [loading, setLoading]     = useState(false)
-  const [error, setError]         = useState("")
-  const inputRef                  = useRef(null)
+  const [fullname, setFullname] = useState("")
+  const [username, setUsername] = useState("")
+  const [email, setEmail]       = useState("")
+  const [password, setPassword] = useState("")
+  const [confirm, setConfirm]   = useState("")
+  const [showPass, setShowPass] = useState(false)
+  const [showConf, setShowConf] = useState(false)
+  const [avatar, setAvatar]     = useState(null)
+  const [preview, setPreview]   = useState(null)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState("")
+  const inputRef                = useRef(null)
+
+  const { register } = useAuth()
+  const navigate      = useNavigate()
 
   const match    = password && confirm && password === confirm
   const mismatch = password && confirm && password !== confirm
@@ -23,13 +28,28 @@ export default function Register() {
     if (file) { setAvatar(file); setPreview(URL.createObjectURL(file)) }
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     if (!fullname || !username || !email || !password || !confirm) { setError("Please fill in all fields."); return }
     if (mismatch) { setError("Passwords do not match."); return }
     setError("")
     setLoading(true)
-    setTimeout(() => setLoading(false), 1500)
+
+    try {
+      const formData = new FormData()
+      formData.append("fullName", fullname)
+      formData.append("username", username)
+      formData.append("email", email)
+      formData.append("password", password)
+      if (avatar) formData.append("avatar", avatar)
+
+      await register(formData)
+      navigate("/login")
+    } catch (err) {
+      setError(err.response?.data?.message || "Registration failed. Please try again.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -131,30 +151,52 @@ export default function Register() {
 
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-300">Full name</label>
-              <input value={fullname} onChange={(e) => setFullname(e.target.value)} placeholder="Your full name"
-                className="w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-zinc-900 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-amber-500/40 transition-colors" />
+              <input
+                value={fullname}
+                onChange={(e) => setFullname(e.target.value)}
+                placeholder="Your full name"
+                autoComplete="name"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-zinc-900 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-amber-500/40 transition-colors"
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-300">Username</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 text-sm">@</span>
-                <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="yourhandle"
-                  className="w-full pl-8 pr-4 py-3 rounded-xl border border-white/[0.08] bg-zinc-900 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-amber-500/40 transition-colors" />
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="yourhandle"
+                  autoComplete="username"
+                  className="w-full pl-8 pr-4 py-3 rounded-xl border border-white/[0.08] bg-zinc-900 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-amber-500/40 transition-colors"
+                />
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-300">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
-                className="w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-zinc-900 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-amber-500/40 transition-colors" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                autoComplete="email"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-zinc-900 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-amber-500/40 transition-colors"
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-300">Password</label>
               <div className="relative">
-                <input type={showPass ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a strong password"
-                  className="w-full px-4 pr-11 py-3 rounded-xl border border-white/[0.08] bg-zinc-900 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-amber-500/40 transition-colors" />
+                <input
+                  type={showPass ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Create a strong password"
+                  autoComplete="new-password"
+                  className="w-full px-4 pr-11 py-3 rounded-xl border border-white/[0.08] bg-zinc-900 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-amber-500/40 transition-colors"
+                />
                 <button type="button" onClick={() => setShowPass(p => !p)} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300 transition-colors">
                   {showPass ? <RiEyeOffLine /> : <RiEyeLine />}
                 </button>
@@ -164,8 +206,14 @@ export default function Register() {
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-300">Confirm password</label>
               <div className="relative">
-                <input type={showConf ? "text" : "password"} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Repeat your password"
-                  className={`w-full px-4 pr-11 py-3 rounded-xl border bg-zinc-900 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none transition-colors ${mismatch ? "border-red-500/40 focus:border-red-500/60" : match ? "border-emerald-500/40" : "border-white/[0.08] focus:border-amber-500/40"}`} />
+                <input
+                  type={showConf ? "text" : "password"}
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  placeholder="Repeat your password"
+                  autoComplete="new-password"
+                  className={`w-full px-4 pr-11 py-3 rounded-xl border bg-zinc-900 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none transition-colors ${mismatch ? "border-red-500/40 focus:border-red-500/60" : match ? "border-emerald-500/40" : "border-white/[0.08] focus:border-amber-500/40"}`}
+                />
                 <button type="button" onClick={() => setShowConf(p => !p)} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300 transition-colors">
                   {showConf ? <RiEyeOffLine /> : <RiEyeLine />}
                 </button>
@@ -174,8 +222,11 @@ export default function Register() {
               {match && <p className="text-xs text-emerald-400 flex items-center gap-1"><RiCheckLine /> Passwords match</p>}
             </div>
 
-            <button type="submit" disabled={loading}
-              className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-1">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+            >
               {loading ? "Creating account..." : "Create account"}
             </button>
           </form>

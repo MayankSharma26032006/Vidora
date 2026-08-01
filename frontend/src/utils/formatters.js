@@ -1,16 +1,19 @@
 export function formatViews(views) {
+  if (!views) return "0"
   if (views >= 1_000_000) return `${(views / 1_000_000).toFixed(1)}M`
   if (views >= 1_000) return `${(views / 1_000).toFixed(1)}K`
   return String(views)
 }
 
 export function formatCount(n) {
+  if (!n) return "0"
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
   return String(n)
 }
 
 export function formatDuration(seconds) {
+  if (!seconds) return "0:00"
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
   const s = seconds % 60
@@ -19,6 +22,7 @@ export function formatDuration(seconds) {
 }
 
 export function formatTimeAgo(dateString) {
+  if (!dateString) return ""
   const diff = Math.floor((Date.now() - new Date(dateString)) / 1000)
   if (diff < 60) return "just now"
   if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`
