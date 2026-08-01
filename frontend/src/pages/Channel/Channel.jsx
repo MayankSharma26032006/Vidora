@@ -43,7 +43,9 @@ export default function Channel() {
       setChannel(data)
       setSubscribed(data.isSubscribed || false)
 
-      const videosRes = await api.get("/videos", { params: { page: 1, limit: 12 } })
+      const videosRes = await api.get("/videos", {
+  params: { page: 1, limit: 12, userId: data._id }
+})
       setVideos(videosRes.data.data.docs || [])
     } catch {
       setChannel(null)

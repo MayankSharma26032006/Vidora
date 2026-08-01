@@ -24,27 +24,23 @@ function Avatar({ name, src, size = "md" }) {
 }
 
 function VideoPlayer({ video }) {
-  const [playing, setPlaying] = useState(false)
   return (
-    <div className="relative w-full aspect-video bg-zinc-900 rounded-xl overflow-hidden group">
-      {video?.thumbnail && (
-        <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
+    <div className="relative w-full aspect-video bg-zinc-900 rounded-xl overflow-hidden">
+      {video?.videoFile ? (
+        <video
+          src={video.videoFile}
+          controls
+          autoPlay={false}
+          className="w-full h-full"
+          poster={video.thumbnail}
+        >
+          Your browser does not support the video tag.
+        </video>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-zinc-600">
+          <span className="text-4xl">▶</span>
+        </div>
       )}
-      <div className="absolute inset-0 bg-black/40" />
-      <button onClick={() => setPlaying(p => !p)} className="absolute inset-0 flex items-center justify-center">
-        <div className="w-16 h-16 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-black/80 transition-all hover:scale-110">
-          <span className="text-white text-2xl">{playing ? "⏸" : "▶"}</span>
-        </div>
-      </button>
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 pb-3 pt-8 opacity-0 group-hover:opacity-100 transition-opacity">
-        <div className="w-full h-1.5 bg-white/20 rounded-full mb-3">
-          <div className="h-full w-[38%] bg-amber-400 rounded-full" />
-        </div>
-        <div className="flex items-center justify-between text-white text-xs">
-          <span>▶ 5:20 / {video?.duration ? `${Math.floor(video.duration / 60)}:${String(video.duration % 60).padStart(2, "0")}` : "0:00"}</span>
-          <span>⛶</span>
-        </div>
-      </div>
     </div>
   )
 }
