@@ -254,7 +254,7 @@ Create a `.env` file inside `backend/`:
 
 ```env
 PORT=8000
-MONGODB_URI=your_mongodb_connection_string
+MONGODB_URL=your_mongodb_connection_string
 CORS_ORIGIN=http://localhost:5173
 
 ACCESS_TOKEN_SECRET=your_access_token_secret

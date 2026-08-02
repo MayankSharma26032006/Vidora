@@ -22,7 +22,7 @@ connectDB()
 // const app = express()
 // ;(async ()=>{
 //     try {
-//         await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`)
+//         await mongoose.connect(`${process.env.MONGODB_URL}/${DB_NAME}`)
 //         app.on("error",()=>{
 //             console.log("Error",error);
 //             throw error 

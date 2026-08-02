@@ -88,10 +88,11 @@ export default function Sidebar() {
       `}
     >
       <div className={`flex items-center h-14 px-4 border-b border-white/[0.06] ${collapsed ? "justify-center" : "gap-2"}`}>
-        <span className="text-amber-400 text-xl leading-none" aria-hidden="true">▶</span>
+      {/* Below span i have to include Logo */}
+        <span className="text-amber-400 text-xl leading-none" aria-hidden="true"></span>
         {!collapsed && (
           <span className="text-white font-semibold text-base tracking-tight">
-            Creator<span className="text-amber-400">Hub</span>
+            Vid<span className="text-amber-400">Ora</span>
           </span>
         )}
       </div>
