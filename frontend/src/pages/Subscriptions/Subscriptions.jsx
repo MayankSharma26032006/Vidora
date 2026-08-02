@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react"
-import Sidebar from "../../components/sidebar/Sidebar"
-import Navbar from "../../components/navbar/Navbar"
+import { Link } from "react-router-dom"
 import VideoCard from "../../components/cards/VideoCard"
 import { useAuth } from "../../context/AuthContext"
 import api from "../../services/api"
-import { RiBellLine, RiBellFill } from "react-icons/ri"
+import { RiBellLine, RiBellFill, RiUserFollowLine } from "react-icons/ri"
 import { formatCount } from "../../utils/formatters"
 
 function CreatorCard({ creator }) {
@@ -16,7 +15,7 @@ function CreatorCard({ creator }) {
     try {
       await api.post(`/subscriptions/c/${creator._id}`)
       setSubscribed(false)
-    } catch {}
+    } catch { /* stay subscribed; error surfaces on next visit */ }
   }
 
   return (
@@ -59,39 +58,55 @@ export default function Subscriptions() {
   const [loading, setLoading]             = useState(true)
 
   useEffect(() => {
-    if (user?._id) fetchSubscriptions()
-  }, [user])
+    let cancelled = false
 
-  async function fetchSubscriptions() {
-    try {
-      setLoading(true)
-      const res = await api.get(`/subscriptions/u/${user._id}`)
-      const channels = (res.data.data || []).map(s => s.channel || s).filter(Boolean)
-      setCreators(channels)
+    async function fetchSubscriptions() {
+      if (!user?._id) {
+        setLoading(false)
+        return
+      }
+      try {
+        setLoading(true)
+        const res = await api.get(`/subscriptions/u/${user._id}`)
+        const channels = (res.data.data || []).map(s => s.channel || s).filter(Boolean)
+        if (!cancelled) setCreators(channels)
 
-      const videosRes = await api.get("/videos", { params: { page: 1, limit: 6, sortBy: "createdAt", sortType: "desc" } })
-      setLatestVideos(videosRes.data.data.docs || [])
-    } catch {
-      setCreators([])
-    } finally {
-      setLoading(false)
+        const videosRes = await api.get("/videos", { params: { page: 1, limit: 6, sortBy: "createdAt", sortType: "desc" } })
+        if (!cancelled) setLatestVideos(videosRes.data.data.docs || [])
+      } catch {
+        if (!cancelled) setCreators([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }
+
+    fetchSubscriptions()
+    return () => { cancelled = true }
+  }, [user?._id])
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950">
-      <Sidebar />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="max-w-[1100px] mx-auto">
+    <div className="px-6 py-6">
+      <div className="max-w-[1100px] mx-auto">
 
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold text-white mb-1">Subscriptions</h1>
-              <p className="text-sm text-zinc-500">Creators you follow.</p>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-white mb-1">Subscriptions</h1>
+          <p className="text-sm text-zinc-500">Creators you follow.</p>
+        </div>
+
+        {!user ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <RiUserFollowLine className="text-amber-400 text-2xl" />
             </div>
-
-            {loading ? (
+            <div>
+              <p className="text-sm font-medium text-zinc-300 mb-1">Sign in to see your subscriptions</p>
+              <p className="text-xs text-zinc-600">Subscriptions are tied to your account.</p>
+            </div>
+            <Link to="/login" className="mt-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-semibold transition-colors">
+              Sign in
+            </Link>
+          </div>
+        ) : loading ? (
               <div className="flex items-center justify-center py-20">
                 <div className="w-6 h-6 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
               </div>
@@ -120,8 +135,6 @@ export default function Subscriptions() {
                 )}
               </>
             )}
-          </div>
-        </main>
       </div>
     </div>
   )

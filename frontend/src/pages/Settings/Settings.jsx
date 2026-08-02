@@ -1,6 +1,5 @@
 import { useState, useRef } from "react"
-import Sidebar from "../../components/sidebar/Sidebar"
-import Navbar from "../../components/navbar/Navbar"
+import ConfirmDialog from "../../components/ui/ConfirmDialog"
 import { useAuth } from "../../context/AuthContext"
 import api from "../../services/api"
 import {
@@ -56,17 +55,27 @@ function Toggle({ checked, onChange, label, description }) {
   )
 }
 
+function PasswordInput({ value, onChange, show, onToggle, placeholder, autoComplete }) {
+  return (
+    <div className="relative">
+      <input type={show ? "text" : "password"} value={value} onChange={onChange} placeholder={placeholder} autoComplete={autoComplete}
+        className="w-full px-4 pr-11 py-3 rounded-xl border border-white/[0.08] bg-zinc-950 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-amber-500/40 transition-colors" />
+      <button onClick={onToggle} type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300 transition-colors">
+        {show ? <RiEyeOffLine /> : <RiEyeLine />}
+      </button>
+    </div>
+  )
+}
+
 function ProfileTab({ user }) {
   const [fullname, setFullname]     = useState(user?.fullname || "")
-  const [username, setUsername]     = useState(user?.username || "")
   const [email, setEmail]           = useState(user?.email || "")
   const [preview, setPreview]       = useState(user?.avatar || null)
   const [avatarFile, setAvatarFile] = useState(null)
-  const [coverFile, setCoverFile]   = useState(null)
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState("")
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const avatarRef                   = useRef(null)
-  const coverRef                    = useRef(null)
 
   function handleAvatarChange(e) {
     const file = e.target.files[0]
@@ -83,16 +92,16 @@ function ProfileTab({ user }) {
         fd.append("avatar", avatarFile)
         await api.patch("/user/update-avatar", fd, { headers: { "Content-Type": "multipart/form-data" } })
       }
-      if (coverFile) {
-        const fd = new FormData()
-        fd.append("coverImage", coverFile)
-        await api.patch("/user/update-cover", fd, { headers: { "Content-Type": "multipart/form-data" } })
-      }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to save changes.")
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleteOpen(false)
+    setError("Account deletion isn't wired to the backend yet. Please contact support.")
   }
 
   return (
@@ -123,7 +132,7 @@ function ProfileTab({ user }) {
           <label className="text-sm font-medium text-zinc-300">Username</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 text-sm">@</span>
-            <input value={username} disabled
+            <input value={user?.username || ""} disabled
               className="w-full pl-8 pr-4 py-3 rounded-xl border border-white/[0.08] bg-zinc-950 text-sm text-zinc-500 outline-none opacity-50 cursor-not-allowed" />
           </div>
           <p className="text-xs text-zinc-600">Username cannot be changed.</p>
@@ -141,10 +150,19 @@ function ProfileTab({ user }) {
       <SectionCard title="Delete Account" description="Permanently delete your account and all your content.">
         <p className="text-sm text-zinc-500">This action cannot be undone.</p>
         <div>
-          <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/10 transition-all">
+          <button onClick={() => setDeleteOpen(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/10 transition-all">
             <RiDeleteBinLine className="text-[15px]" /> Delete my account
           </button>
         </div>
+        <ConfirmDialog
+          open={deleteOpen}
+          onClose={() => setDeleteOpen(false)}
+          onConfirm={handleDeleteAccount}
+          title="Delete your account?"
+          description="Account deletion isn't wired to the backend yet — but when it is, this will permanently remove your account and all your content."
+          confirmLabel="Delete account"
+          variant="danger"
+        />
       </SectionCard>
     </div>
   )
@@ -177,18 +195,6 @@ function PasswordTab() {
     }
   }
 
-  function PasswordInput({ value, onChange, show, onToggle, placeholder, autoComplete }) {
-    return (
-      <div className="relative">
-        <input type={show ? "text" : "password"} value={value} onChange={onChange} placeholder={placeholder} autoComplete={autoComplete}
-          className="w-full px-4 pr-11 py-3 rounded-xl border border-white/[0.08] bg-zinc-950 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-amber-500/40 transition-colors" />
-        <button onClick={onToggle} type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300 transition-colors">
-          {show ? <RiEyeOffLine /> : <RiEyeLine />}
-        </button>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col gap-5">
       <SectionCard title="Change Password" description="Update your password to keep your account secure.">
@@ -215,9 +221,21 @@ function PasswordTab() {
   )
 }
 
+const NOTIF_STORAGE_KEY = "vidora_notification_prefs"
+
+function loadPrefs(key, defaults) {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? { ...defaults, ...JSON.parse(raw) } : defaults
+  } catch {
+    return defaults
+  }
+}
+
 function NotificationsTab() {
-  const [prefs, setPrefs] = useState({ newSubscriber: true, comments: true, likes: false, newUploads: true, weeklyDigest: false, emailNotifs: true })
+  const [prefs, setPrefs] = useState(() => loadPrefs(NOTIF_STORAGE_KEY, { newSubscriber: true, comments: true, likes: false, newUploads: true, weeklyDigest: false, emailNotifs: true }))
   function toggle(key) { setPrefs(p => ({ ...p, [key]: !p[key] })) }
+  function save() { localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(prefs)) }
   return (
     <div className="flex flex-col gap-5">
       <SectionCard title="Notification Preferences" description="Control what you get notified about.">
@@ -228,15 +246,18 @@ function NotificationsTab() {
           <Toggle checked={prefs.newUploads} onChange={() => toggle("newUploads")} label="New uploads" description="When a channel you follow uploads" />
           <Toggle checked={prefs.emailNotifs} onChange={() => toggle("emailNotifs")} label="Email notifications" description="Receive notifications via email" />
         </div>
-        <div className="flex justify-end"><SaveButton onClick={() => {}} /></div>
+        <div className="flex justify-end"><SaveButton onClick={save} /></div>
       </SectionCard>
     </div>
   )
 }
 
+const PRIVACY_STORAGE_KEY = "vidora_privacy_prefs"
+
 function PrivacyTab() {
-  const [prefs, setPrefs] = useState({ privateAccount: false, showWatchHistory: true, showLikedVideos: false, showSubscriptions: true })
+  const [prefs, setPrefs] = useState(() => loadPrefs(PRIVACY_STORAGE_KEY, { privateAccount: false, showWatchHistory: true, showLikedVideos: false, showSubscriptions: true }))
   function toggle(key) { setPrefs(p => ({ ...p, [key]: !p[key] })) }
+  function save() { localStorage.setItem(PRIVACY_STORAGE_KEY, JSON.stringify(prefs)) }
   return (
     <div className="flex flex-col gap-5">
       <SectionCard title="Privacy Settings" description="Control your account visibility and data.">
@@ -246,7 +267,7 @@ function PrivacyTab() {
           <Toggle checked={prefs.showLikedVideos} onChange={() => toggle("showLikedVideos")} label="Show liked videos" description="Make your liked videos public" />
           <Toggle checked={prefs.showSubscriptions} onChange={() => toggle("showSubscriptions")} label="Show subscriptions" description="Make your subscriptions visible" />
         </div>
-        <div className="flex justify-end"><SaveButton onClick={() => {}} /></div>
+        <div className="flex justify-end"><SaveButton onClick={save} /></div>
       </SectionCard>
     </div>
   )
@@ -265,12 +286,8 @@ export default function Settings() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950">
-      <Sidebar />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="max-w-[1000px] mx-auto">
+    <div className="px-6 py-6">
+      <div className="max-w-[1000px] mx-auto">
             <div className="mb-8">
               <h1 className="text-2xl font-bold text-white mb-1">Settings</h1>
               <p className="text-sm text-zinc-500">Manage your account and preferences.</p>
@@ -287,8 +304,6 @@ export default function Settings() {
               </nav>
               <div className="flex-1 min-w-0">{tabContent[activeTab]}</div>
             </div>
-          </div>
-        </main>
       </div>
     </div>
   )

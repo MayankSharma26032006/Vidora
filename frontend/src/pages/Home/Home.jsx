@@ -1,19 +1,15 @@
 import { useState, useEffect } from "react"
-import Sidebar from "../../components/sidebar/Sidebar"
-import Navbar from "../../components/navbar/Navbar"
+import { useNavigate } from "react-router-dom"
 import VideoCard from "../../components/cards/VideoCard"
 import { RiFireLine, RiSparklingLine } from "react-icons/ri"
+import { formatViews } from "../../utils/formatters"
+import { HOME_CATEGORY_PILLS, categoryParamFor, sortByFor } from "../../utils/constants"
 import api from "../../services/api"
-
-const CATEGORIES = [
-  "All", "Music", "Coding", "Travel", "Cooking",
-  "Gaming", "Fitness", "Podcasts", "Recently uploaded", "New to you",
-]
 
 function CategoryPills({ active, onChange }) {
   return (
     <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
-      {CATEGORIES.map((cat) => (
+      {HOME_CATEGORY_PILLS.map((cat) => (
         <button
           key={cat}
           onClick={() => onChange(cat)}
@@ -36,9 +32,20 @@ function SectionHeader({ icon: Icon, title }) {
 }
 
 function FeaturedBanner({ video }) {
+  const navigate = useNavigate()
   if (!video) return null
+  function goWatch() {
+    if (video._id) navigate(`/watch/${video._id}`)
+  }
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden h-64 mb-8 group cursor-pointer">
+    <div
+      onClick={goWatch}
+      role="link"
+      tabIndex={0}
+      aria-label={`Watch ${video.title}`}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goWatch() } }}
+      className="relative w-full rounded-2xl overflow-hidden h-64 mb-8 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+    >
       <img
         src={video.thumbnail}
         alt={video.title}
@@ -53,9 +60,12 @@ function FeaturedBanner({ video }) {
         </span>
         <h1 className="text-white text-2xl font-semibold leading-snug mb-2">{video.title}</h1>
         <p className="text-zinc-400 text-sm mb-4">
-          {video.owner?.fullname} · {((video.views || 0) / 1000).toFixed(1)}K views
+          {video.owner?.fullname} · {formatViews(video.views)} views
         </p>
-        <button className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-zinc-950 text-sm font-semibold hover:bg-zinc-100 transition-colors">
+        <button
+          onClick={(e) => { e.stopPropagation(); goWatch() }}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-zinc-950 text-sm font-semibold hover:bg-zinc-100 transition-colors"
+        >
           ▶ Watch now
         </button>
       </div>
@@ -104,33 +114,38 @@ export default function Home() {
   const [error, setError]                   = useState("")
 
   useEffect(() => {
-    fetchVideos()
-  }, [])
+    let cancelled = false
 
-  async function fetchVideos() {
-    try {
-      setLoading(true)
-      const res = await api.get("/videos", {
-        params: { page: 1, limit: 20, sortBy: "createdAt", sortType: "desc" }
-      })
-      setVideos(res.data.data.docs || [])
-    } catch {
-      setError("Failed to load videos.")
-    } finally {
-      setLoading(false)
+    async function fetchVideos() {
+      try {
+        setLoading(true)
+        const res = await api.get("/videos", {
+          params: {
+            page: 1,
+            limit: 20,
+            sortBy: sortByFor(activeCategory),
+            sortType: "desc",
+            category: categoryParamFor(activeCategory),
+          }
+        })
+        if (!cancelled) setVideos(res.data.data.docs || [])
+      } catch {
+        if (!cancelled) setError("Failed to load videos.")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }
+
+    fetchVideos()
+    return () => { cancelled = true }
+  }, [activeCategory])
 
   const featured = videos[0] || null
   const trending = videos.slice(1, 4)
   const forYou   = videos.slice(4)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950">
-      <Sidebar />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Navbar />
-        <main className="flex-1 px-6 py-6 overflow-y-auto">
+    <div className="px-6 py-6">
 
           {loading ? (
             <SkeletonGrid />
@@ -142,19 +157,21 @@ export default function Home() {
               <div className="mb-7">
                 <CategoryPills active={activeCategory} onChange={setActiveCategory} />
               </div>
-              <section className="mb-10">
-                <SectionHeader icon={RiFireLine} title="Trending" />
-                <VideoGrid videos={trending} />
-              </section>
-              <section>
-                <SectionHeader icon={RiSparklingLine} title="For you" />
-                <VideoGrid videos={forYou} />
-              </section>
+              {trending.length > 0 && (
+                <section className="mb-10">
+                  <SectionHeader icon={RiFireLine} title="Trending" />
+                  <VideoGrid videos={trending} />
+                </section>
+              )}
+              {forYou.length > 0 && (
+                <section>
+                  <SectionHeader icon={RiSparklingLine} title="For you" />
+                  <VideoGrid videos={forYou} />
+                </section>
+              )}
             </>
           )}
 
-        </main>
-      </div>
     </div>
   )
 }

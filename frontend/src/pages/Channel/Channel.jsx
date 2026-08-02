@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import Sidebar from "../../components/sidebar/Sidebar"
-import Navbar from "../../components/navbar/Navbar"
 import VideoCard from "../../components/cards/VideoCard"
 import { useAuth } from "../../context/AuthContext"
 import api from "../../services/api"
-import { RiBellLine, RiBellFill, RiLinksLine, RiTwitterXLine, RiInstagramLine } from "react-icons/ri"
+import { RiBellLine, RiBellFill } from "react-icons/ri"
 import { formatCount } from "../../utils/formatters"
 
 const TABS = ["Videos", "Playlists", "Community", "About"]
@@ -28,31 +26,37 @@ export default function Channel() {
   const [videos, setVideos]               = useState([])
   const [subscribed, setSubscribed]       = useState(false)
   const [notified, setNotified]           = useState(false)
+  const [joined, setJoined]               = useState(false)
   const [activeTab, setActiveTab]         = useState("Videos")
   const [loading, setLoading]             = useState(true)
 
   useEffect(() => {
-    if (username) fetchChannel()
-  }, [username])
+    if (!username) return
+    let cancelled = false
 
-  async function fetchChannel() {
-    try {
-      setLoading(true)
-      const res = await api.get(`/user/channel-profile/${username}`)
-      const data = res.data.data
-      setChannel(data)
-      setSubscribed(data.isSubscribed || false)
+    async function fetchChannel() {
+      try {
+        setLoading(true)
+        const res = await api.get(`/user/channel-profile/${username}`)
+        if (cancelled) return
+        const data = res.data.data
+        setChannel(data)
+        setSubscribed(data.isSubscribed || false)
 
-      const videosRes = await api.get("/videos", {
-  params: { page: 1, limit: 12, userId: data._id }
-})
-      setVideos(videosRes.data.data.docs || [])
-    } catch {
-      setChannel(null)
-    } finally {
-      setLoading(false)
+        const videosRes = await api.get("/videos", {
+          params: { page: 1, limit: 12, userId: data._id }
+        })
+        if (!cancelled) setVideos(videosRes.data.data.docs || [])
+      } catch {
+        if (!cancelled) setChannel(null)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }
+
+    fetchChannel()
+    return () => { cancelled = true }
+  }, [username])
 
   async function handleSubscribe() {
     if (!user) { navigate("/login"); return }
@@ -60,50 +64,35 @@ export default function Channel() {
       await api.post(`/subscriptions/c/${channel?._id}`)
       setSubscribed(p => !p)
       if (subscribed) setNotified(false)
-    } catch {}
+    } catch {
+      // keep current state on failure
+    }
   }
 
   if (loading) {
     return (
-      <div className="flex h-screen overflow-hidden bg-zinc-950">
-        <Sidebar />
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-          <Navbar />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="w-6 h-6 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-6 h-6 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
       </div>
     )
   }
 
   if (!channel) {
     return (
-      <div className="flex h-screen overflow-hidden bg-zinc-950">
-        <Sidebar />
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-          <Navbar />
-          <div className="flex-1 flex items-center justify-center text-zinc-500">Channel not found.</div>
-        </div>
-      </div>
+      <div className="flex items-center justify-center min-h-[60vh] text-zinc-500">Channel not found.</div>
     )
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950">
-      <Sidebar />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto">
+    <>
+      <div className="relative w-full h-44 bg-zinc-900 overflow-hidden">
+        {channel.coverImage && (
+          <img src={channel.coverImage} alt="Channel cover" className="w-full h-full object-cover opacity-60" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent" />
+      </div>
 
-          <div className="relative w-full h-44 bg-zinc-900 overflow-hidden">
-            {channel.coverImage && (
-              <img src={channel.coverImage} alt="Channel cover" className="w-full h-full object-cover opacity-60" />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent" />
-          </div>
-
-          <div className="px-6 max-w-[1200px] mx-auto">
+      <div className="px-6 max-w-[1200px] mx-auto">
             <div className="flex flex-wrap items-end gap-5 -mt-12 mb-6 relative z-10">
               <ChannelAvatar name={channel.fullname} src={channel.avatar} />
               <div className="flex-1 min-w-0 pb-1">
@@ -132,8 +121,11 @@ export default function Channel() {
                 >
                   {subscribed ? "Subscribed" : "Subscribe"}
                 </button>
-                <button className="px-6 py-2.5 rounded-full text-sm font-semibold border border-white/[0.12] text-zinc-300 hover:bg-white/[0.06] transition-all">
-                  Join
+                <button
+                  onClick={() => setJoined(p => !p)}
+                  className={`px-6 py-2.5 rounded-full text-sm font-semibold border transition-all ${joined ? "bg-amber-500/15 border-amber-500/40 text-amber-400" : "border-white/[0.12] text-zinc-300 hover:bg-white/[0.06]"}`}
+                >
+                  {joined ? "Joined" : "Join"}
                 </button>
               </div>
             </div>
@@ -164,9 +156,7 @@ export default function Channel() {
                 <p className="text-sm text-zinc-300 leading-relaxed">{channel.bio || "No bio yet."}</p>
               </div>
             )}
-          </div>
-        </main>
       </div>
-    </div>
+    </>
   )
 }

@@ -104,7 +104,6 @@ export default function Navbar() {
   const navigate                                  = useNavigate()
   const [searchOpen, setSearchOpen]               = useState(false)
   const [profileMenuOpen, setProfileMenuOpen]     = useState(false)
-  const notificationCount                         = 3
 
   const initials = user?.fullname
     ? user.fullname.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
@@ -140,15 +139,10 @@ export default function Navbar() {
 
             <button
               onClick={() => navigate("/notifications")}
-              aria-label={`Notifications${notificationCount ? `, ${notificationCount} unread` : ""}`}
+              aria-label="Notifications"
               className="relative flex items-center justify-center w-9 h-9 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
             >
               <RiBellLine className="text-[19px]" />
-              {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-amber-500 text-zinc-950 text-[10px] font-bold flex items-center justify-center">
-                  {notificationCount > 9 ? "9+" : notificationCount}
-                </span>
-              )}
             </button>
 
             <div className="relative ml-1">

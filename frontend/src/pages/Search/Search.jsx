@@ -1,57 +1,59 @@
 import { useState, useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
-import Sidebar from "../../components/sidebar/Sidebar"
-import Navbar from "../../components/navbar/Navbar"
 import VideoCard from "../../components/cards/VideoCard"
+import useDebounce from "../../hooks/useDebounce"
 import api from "../../services/api"
-import { RiSearchLine, RiEqualizerLine } from "react-icons/ri"
+import { RiSearchLine } from "react-icons/ri"
 
-const FILTERS = ["All", "Videos", "Channels", "Playlists", "Live"]
 const SORT_OPTIONS = ["Relevance", "Upload date", "View count", "Rating"]
 
 export default function Search() {
   const [searchParams, setSearchParams]   = useSearchParams()
   const [query, setQuery]                 = useState(searchParams.get("q") || "")
-  const [activeFilter, setFilter]         = useState("All")
   const [sortBy, setSortBy]               = useState("Relevance")
   const [videos, setVideos]               = useState([])
   const [loading, setLoading]             = useState(false)
 
-  useEffect(() => {
-    const q = searchParams.get("q")
-    if (q) { setQuery(q); fetchResults(q) }
-  }, [searchParams])
+  // Live search as you type (debounced), still syncs the URL on submit
+  const debouncedQuery = useDebounce(query, 350)
 
-  async function fetchResults(q) {
-    if (!q?.trim()) return
-    try {
-      setLoading(true)
-      const sortMap = { "Upload date": "createdAt", "View count": "views", "Relevance": "createdAt", "Rating": "views" }
-      const res = await api.get("/videos", {
-        params: { query: q, page: 1, limit: 20, sortBy: sortMap[sortBy] || "createdAt", sortType: "desc" }
-      })
-      setVideos(res.data.data.docs || [])
-    } catch {
-      setVideos([])
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchResults() {
+      const q = debouncedQuery.trim()
+      if (!q) {
+        setVideos([])
+        setLoading(false)
+        return
+      }
+      try {
+        setLoading(true)
+        const sortMap = { "Upload date": "createdAt", "View count": "views", "Relevance": "createdAt", "Rating": "views" }
+        const res = await api.get("/videos", {
+          params: { query: q, page: 1, limit: 20, sortBy: sortMap[sortBy] || "createdAt", sortType: "desc" }
+        })
+        if (!cancelled) setVideos(res.data.data.docs || [])
+      } catch {
+        if (!cancelled) setVideos([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }
+
+    fetchResults()
+    return () => { cancelled = true }
+  }, [debouncedQuery, sortBy])
 
   function handleSearch(e) {
     e.preventDefault()
     if (!query.trim()) return
     setSearchParams({ q: query })
-    fetchResults(query)
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950">
-      <Sidebar />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="max-w-[1100px] mx-auto">
+    <div className="px-6 py-6">
+      <div className="max-w-[1100px] mx-auto">
 
             <form onSubmit={handleSearch} className="relative mb-6">
               <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-[18px]" />
@@ -63,19 +65,7 @@ export default function Search() {
               />
             </form>
 
-            <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-              <div className="flex items-center gap-2 flex-wrap">
-                <RiEqualizerLine className="text-zinc-500 text-[16px] shrink-0" />
-                {FILTERS.map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeFilter === f ? "bg-white text-zinc-950" : "bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1] hover:text-zinc-200"}`}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
+            <div className="flex items-center justify-end gap-4 mb-6">
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -106,8 +96,6 @@ export default function Search() {
               </div>
             )}
 
-          </div>
-        </main>
       </div>
     </div>
   )

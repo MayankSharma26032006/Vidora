@@ -15,7 +15,6 @@ export default function Tabs({
   }
 
   const isUnderline = variant === "underline"
-  const isPill      = variant === "pill"
 
   return (
     <div className={className}>

@@ -27,6 +27,11 @@ thumbnailPublicId:{
         required:true,
 
     },
+    category:{
+        type:String,
+        default:"Other",
+
+    },
     duration:{
         type:Number,
         required:true,

@@ -3,18 +3,30 @@ import { useNavigate } from "react-router-dom"
 import { RiMoreLine, RiPlayCircleLine, RiBookmarkLine, RiShareLine } from "react-icons/ri"
 import { formatViews, formatDuration, formatTimeAgo } from "../../utils/formatters"
 
-function ContextMenu({ onClose }) {
+function ContextMenu({ videoId, onClose }) {
+  const [done, setDone] = useState(null)
   const items = [
-    { icon: RiPlayCircleLine, label: "Add to queue"    },
-    { icon: RiBookmarkLine,   label: "Save to playlist" },
-    { icon: RiShareLine,      label: "Share"            },
+    { key: "queue", icon: RiPlayCircleLine, label: "Add to queue",     doneLabel: "Added to queue"   },
+    { key: "save",  icon: RiBookmarkLine,   label: "Save to playlist", doneLabel: "Saved to playlist" },
+    { key: "share", icon: RiShareLine,      label: "Share",            doneLabel: "Link copied"       },
   ]
+
+  function handleAction(item) {
+    if (item.key === "share") {
+      const url = `${window.location.origin}/watch/${videoId}`
+      navigator.clipboard?.writeText(url).catch(() => {})
+    }
+    setDone(item.key)
+    setTimeout(onClose, 1200)
+  }
+
   return (
     <div role="menu" className="absolute right-0 top-8 w-44 bg-zinc-900 border border-white/[0.08] rounded-xl shadow-2xl shadow-black/60 overflow-hidden z-20" onMouseLeave={onClose}>
       {items.map(item => (
-        <button key={item.label} role="menuitem" className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">
+        <button key={item.label} role="menuitem" onClick={(e) => { e.stopPropagation(); handleAction(item) }}
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">
           <item.icon className="text-[15px] shrink-0" />
-          {item.label}
+          {done === item.key ? item.doneLabel : item.label}
         </button>
       ))}
     </div>
@@ -97,7 +109,7 @@ export default function VideoCard({ video = {}, variant = "default" }) {
             <button onClick={e => { e.stopPropagation(); setMenuOpen(p => !p) }} aria-label="More options" className="text-zinc-600 hover:text-zinc-300 transition-colors">
               <RiMoreLine className="text-[17px]" />
             </button>
-            {menuOpen && <ContextMenu onClose={() => setMenuOpen(false)} />}
+            {menuOpen && <ContextMenu videoId={_id} onClose={() => setMenuOpen(false)} />}
           </div>
         </div>
       </article>
@@ -117,7 +129,7 @@ export default function VideoCard({ video = {}, variant = "default" }) {
                 className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-zinc-200 transition-all p-0.5 rounded">
                 <RiMoreLine className="text-[16px]" />
               </button>
-              {menuOpen && <ContextMenu onClose={() => setMenuOpen(false)} />}
+              {menuOpen && <ContextMenu videoId={_id} onClose={() => setMenuOpen(false)} />}
             </div>
           </div>
           <p className="text-xs text-zinc-500 mt-1 hover:text-zinc-300 transition-colors truncate">

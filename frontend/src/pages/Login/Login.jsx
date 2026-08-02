@@ -8,6 +8,7 @@ export default function Login() {
   const [password, setPassword] = useState("")
   const [remember, setRemember] = useState(false)
   const [showPass, setShowPass] = useState(false)
+  const [forgotOpen, setForgotOpen] = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState("")
 
@@ -134,10 +135,16 @@ export default function Login() {
                 </button>
                 <span className="text-sm text-zinc-400">Remember me</span>
               </label>
-              <button type="button" className="text-sm text-amber-400 hover:text-amber-300 transition-colors">
+              <button type="button" onClick={() => setForgotOpen(p => !p)} className="text-sm text-amber-400 hover:text-amber-300 transition-colors">
                 Forgot password?
               </button>
             </div>
+
+            {forgotOpen && (
+              <div className="px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.06] text-xs text-zinc-400">
+                Password reset isn't set up yet — contact support for help recovering your account.
+              </div>
+            )}
 
             <button
               type="submit"

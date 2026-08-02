@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react"
-import Sidebar from "../../components/sidebar/Sidebar"
-import Navbar from "../../components/navbar/Navbar"
+import { Link } from "react-router-dom"
+import { useAuth } from "../../context/AuthContext"
 import api from "../../services/api"
 import {
   RiUploadLine, RiUserFollowLine, RiEyeLine, RiVideoLine, RiThumbUpLine,
-  RiEditLine, RiDeleteBinLine, RiEyeOffLine, RiArrowUpLine, RiMoreLine,
+  RiDeleteBinLine, RiEyeOffLine, RiArrowUpLine, RiMoreLine,
 } from "react-icons/ri"
 import { formatCount } from "../../utils/formatters"
 
@@ -35,7 +35,7 @@ function StatusBadge({ status }) {
   return <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-800 text-zinc-500 border border-white/[0.06]">Draft</span>
 }
 
-function ActionMenu({ videoId, isPublished, onDelete, onToggle }) {
+function ActionMenu({ videoId, onDelete, onToggle }) {
   const [open, setOpen] = useState(false)
   return (
     <div className="relative">
@@ -58,41 +58,49 @@ function ActionMenu({ videoId, isPublished, onDelete, onToggle }) {
 }
 
 export default function Dashboard() {
-  const [stats, setStats]   = useState(null)
-  const [videos, setVideos] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { user }                = useAuth()
+  const [stats, setStats]       = useState(null)
+  const [videos, setVideos]     = useState([])
+  const [loading, setLoading]   = useState(true)
 
   useEffect(() => {
-    fetchDashboard()
-  }, [])
+    let cancelled = false
 
-  async function fetchDashboard() {
-    try {
-      const [statsRes, videosRes] = await Promise.all([
-        api.get("/dashboard/stats"),
-        api.get("/dashboard/videos"),
-      ])
-      setStats(statsRes.data.data)
-      setVideos(videosRes.data.data || [])
-    } catch {
-      setStats(null)
-    } finally {
-      setLoading(false)
+    async function fetchDashboard() {
+      if (!user?._id) {
+        setLoading(false)
+        return
+      }
+      try {
+        const [statsRes, videosRes] = await Promise.all([
+          api.get("/dashboard/stats"),
+          api.get("/dashboard/videos"),
+        ])
+        if (!cancelled) setStats(statsRes.data.data)
+        if (!cancelled) setVideos(videosRes.data.data || [])
+      } catch {
+        if (!cancelled) setStats(null)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }
+
+    fetchDashboard()
+    return () => { cancelled = true }
+  }, [user?._id])
 
   async function handleDelete(videoId) {
     try {
       await api.delete(`/videos/${videoId}`)
       setVideos(prev => prev.filter(v => v._id !== videoId))
-    } catch {}
+    } catch { /* refresh or dismiss surfaces the error */ }
   }
 
   async function handleToggle(videoId) {
     try {
       await api.patch(`/videos/${videoId}`)
       setVideos(prev => prev.map(v => v._id === videoId ? { ...v, isPublished: !v.isPublished } : v))
-    } catch {}
+    } catch { /* refresh or dismiss surfaces the error */ }
   }
 
   const statCards = [
@@ -103,12 +111,8 @@ export default function Dashboard() {
   ]
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950">
-      <Sidebar />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="max-w-[1200px] mx-auto">
+    <div className="px-6 py-6">
+      <div className="max-w-[1200px] mx-auto">
 
             <div className="flex items-center justify-between mb-8">
               <div>
@@ -120,7 +124,20 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {loading ? (
+            {!user ? (
+              <div className="flex flex-col items-center justify-center py-24 text-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                  <RiVideoLine className="text-amber-400 text-2xl" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-zinc-300 mb-1">Sign in to open Creator Studio</p>
+                  <p className="text-xs text-zinc-600">Your channel stats and videos live here.</p>
+                </div>
+                <Link to="/login" className="mt-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-semibold transition-colors">
+                  Sign in
+                </Link>
+              </div>
+            ) : loading ? (
               <div className="flex items-center justify-center py-20">
                 <div className="w-6 h-6 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
               </div>
@@ -165,7 +182,6 @@ export default function Dashboard() {
                             <td className="px-4 py-4">
                               <ActionMenu
                                 videoId={video._id}
-                                isPublished={video.isPublished}
                                 onDelete={handleDelete}
                                 onToggle={handleToggle}
                               />
@@ -181,8 +197,6 @@ export default function Dashboard() {
                 </div>
               </>
             )}
-          </div>
-        </main>
       </div>
     </div>
   )

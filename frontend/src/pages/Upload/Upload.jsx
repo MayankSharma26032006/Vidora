@@ -1,17 +1,14 @@
 import { useState, useRef } from "react"
-import { useNavigate } from "react-router-dom"
-import Sidebar from "../../components/sidebar/Sidebar"
-import Navbar from "../../components/navbar/Navbar"
+import { Link, useNavigate } from "react-router-dom"
+import { useAuth } from "../../context/AuthContext"
 import api from "../../services/api"
+import { CATEGORIES } from "../../utils/constants"
 import {
-  RiUploadCloud2Line, RiImageAddLine, RiCloseLine,
+  RiUploadCloud2Line, RiImageAddLine,
   RiCheckLine, RiVideoLine, RiGlobalLine, RiLockLine,
 } from "react-icons/ri"
 
-const CATEGORIES = [
-  "Select a category", "Music", "Coding", "Travel", "Cooking",
-  "Gaming", "Fitness", "Podcasts", "Education", "Entertainment", "News", "Other",
-]
+const UPLOAD_CATEGORIES = ["Select a category", ...CATEGORIES]
 
 function VideoUploadZone({ file, progress, onFile }) {
   const inputRef = useRef(null)
@@ -96,14 +93,14 @@ function ThumbnailUploadZone({ onFile }) {
       className="w-full aspect-video rounded-xl border-2 border-dashed border-white/[0.08] hover:border-white/[0.18] bg-zinc-900 flex flex-col items-center justify-center gap-3 cursor-pointer"
     >
       <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e.target.files[0])} />
-      <RiImageAddLine className="text-zinc-600 text-2xl" />
-      <p className="text-xs text-zinc-600 text-center px-4">Upload thumbnail<br />JPG, PNG — 16:9 recommended</p>
+      <RiImageAddLine className="text-zinc-600 text-2xl" />                      <p className="text-xs text-zinc-600 text-center px-4">Upload thumbnail (required)<br />JPG, PNG — 16:9 recommended</p>
     </div>
   )
 }
 
 export default function Upload() {
   const navigate                              = useNavigate()
+  const { user }                              = useAuth()
   const [videoFile, setVideoFile]             = useState(null)
   const [thumbnailFile, setThumbnailFile]     = useState(null)
   const [title, setTitle]                     = useState("")
@@ -118,31 +115,36 @@ export default function Upload() {
   function handleVideoFile(file) {
     setVideoFile(file)
     setVideoProgress(0)
-    let p = 0
-    const interval = setInterval(() => {
-      p += Math.floor(Math.random() * 12) + 3
-      if (p >= 100) { p = 100; clearInterval(interval) }
-      setVideoProgress(p)
-    }, 300)
   }
 
-  async function handleSubmit(asDraft) {
+  async function handleSubmit() {
     if (!videoFile) { setError("Please select a video file."); return }
     if (!title.trim()) { setError("Please enter a title."); return }
+    if (!thumbnailFile) { setError("Please add a thumbnail — it is required."); return }
     setError("")
     setLoading(true)
+    setVideoProgress(0)
 
     try {
       const formData = new FormData()
       formData.append("videoFile", videoFile)
+      formData.append("thumbnail", thumbnailFile)
       formData.append("title", title.trim())
       formData.append("description", description.trim())
-      if (thumbnailFile) formData.append("thumbnail", thumbnailFile)
+      formData.append("category", category === "Select a category" ? "Other" : category)
+      formData.append("isPublished", String(isPublished))
 
       await api.post("/videos", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (event) => {
+          if (event.total) {
+            const percent = Math.round((event.loaded * 100) / event.total)
+            setVideoProgress(Math.min(percent, 100))
+          }
+        },
       })
 
+      setVideoProgress(100)
       setSuccess(true)
       setTimeout(() => navigate("/studio"), 1500)
     } catch (err) {
@@ -150,22 +152,42 @@ export default function Upload() {
     } finally {
       setLoading(false)
     }
+  }  const isReady = videoFile && title.trim() && thumbnailFile
+
+  if (!user) {
+    return (
+      <div className="px-6 py-6">
+        <div className="max-w-[1100px] mx-auto">
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-white mb-1">Upload video</h1>
+            <p className="text-sm text-zinc-500">Share your content with the world.</p>
+          </div>
+          <div className="flex flex-col items-center justify-center py-24 text-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <RiUploadCloud2Line className="text-amber-400 text-2xl" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-zinc-300 mb-1">Sign in to upload videos</p>
+              <p className="text-xs text-zinc-600">Uploads are tied to your account.</p>
+            </div>
+            <Link to="/login" className="mt-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-semibold transition-colors">
+              Sign in
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
-  const isReady = videoFile && title.trim()
-
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950">
-      <Sidebar />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="max-w-[1100px] mx-auto">
+    <div className="px-6 py-6">
+      <div className="max-w-[1100px] mx-auto">
 
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold text-white mb-1">Upload video</h1>
-              <p className="text-sm text-zinc-500">Share your content with the world.</p>
-            </div>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-white mb-1">Upload video</h1>
+          <p className="text-sm text-zinc-500">Share your content with the world.</p>
+        </div>
+
 
             {success && (
               <div className="mb-6 flex items-center gap-3 px-5 py-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium">
@@ -212,7 +234,7 @@ export default function Upload() {
                     <label className="text-sm font-medium text-zinc-300">Category</label>
                     <select value={category} onChange={(e) => setCategory(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-zinc-950 text-sm text-zinc-300 outline-none focus:border-amber-500/40 transition-colors appearance-none cursor-pointer">
-                      {CATEGORIES.map(cat => <option key={cat} value={cat} className="bg-zinc-900">{cat}</option>)}
+                      {UPLOAD_CATEGORIES.map(cat => <option key={cat} value={cat} className="bg-zinc-900">{cat}</option>)}
                     </select>
                   </div>
                 </div>
@@ -247,15 +269,13 @@ export default function Upload() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <button onClick={() => handleSubmit(false)} disabled={!isReady || loading}
+                  <button onClick={handleSubmit} disabled={!isReady || loading}
                     className="w-full py-3 rounded-xl text-sm font-semibold transition-all bg-amber-500 hover:bg-amber-400 text-zinc-950 disabled:opacity-40 disabled:cursor-not-allowed">
                     {loading ? "Uploading..." : isPublished ? "Publish video" : "Save & make private"}
                   </button>
                 </div>
               </div>
             </div>
-          </div>
-        </main>
       </div>
     </div>
   )

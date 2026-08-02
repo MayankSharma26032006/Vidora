@@ -1,5 +1,6 @@
 import { Router } from "express"
 import {
+    getAllTweets,
     createTweet,
     getUserTweets,
     updateTweet,
@@ -9,10 +10,9 @@ import { verifyJWT } from "../middlewares/auth.middleware.js"
 
 const router = Router()
 
-router.use(verifyJWT)
-
-router.route("/").post(createTweet)
+// Reads are public (community feed); writes require auth
+router.route("/").get(getAllTweets).post(verifyJWT, createTweet)
 router.route("/user/:userId").get(getUserTweets)
-router.route("/:tweetId").patch(updateTweet).delete(deleteTweet)
+router.route("/:tweetId").patch(verifyJWT, updateTweet).delete(verifyJWT, deleteTweet)
 
 export default router

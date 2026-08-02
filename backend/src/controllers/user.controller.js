@@ -84,12 +84,10 @@ const registerUser = asyncHandler(async (req, res) => {
   // console.log('DEBUG req.files:', req.files)
   // console.log('DEBUG req.body:', req.body)
 
-  const avatarLocalPath = req.files?.avatar[0]?.path
-  // const coverImageLocalPath = req.files?.coverImage[0]?.path
+  const avatarLocalPath = req.files?.avatar?.[0]?.path
   let coverImageLocalPath;
   if(req.files&& Array.isArray(req.files.coverImage)&&req.files.coverImage.length>0){
     coverImageLocalPath = req.files.coverImage[0].path
-
   }
 
 
@@ -379,7 +377,7 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
     },
     {
       $project:{
-        fullName:1,
+        fullname:1,
         username:1,
         subscribersCount:1,
         channelsSubscribedToCount:1,

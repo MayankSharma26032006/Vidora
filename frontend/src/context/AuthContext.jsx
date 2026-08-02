@@ -53,6 +53,8 @@ export function AuthProvider({ children }) {
   )
 }
 
+// Provider + hook share one file (re-exported by hooks/useAuth.js)
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) throw new Error("useAuth must be used inside AuthProvider")

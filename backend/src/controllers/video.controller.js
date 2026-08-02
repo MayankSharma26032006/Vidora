@@ -13,8 +13,14 @@ const getAllVideos = asyncHandler(async(req,res)=>{
     query,
     sortBy = "createdAt",
     sortType = "desc",
-    userId
+    userId,
+    category
     }=req.query
+
+    // Only allow sorting by fields that actually exist on the Video document
+    const SORTABLE_FIELDS = ["createdAt", "views", "duration", "title", "updatedAt"]
+    const effectiveSortBy = SORTABLE_FIELDS.includes(sortBy) ? sortBy : "createdAt"
+
     const pipeline = []
     if(userId){
         if(!isValidObjectId(userId)){
@@ -29,12 +35,23 @@ const getAllVideos = asyncHandler(async(req,res)=>{
     
 
     if(query){
+        // Escape regex metacharacters so user input is a literal contains-search
+        // (prevents ReDoS via pathological regex strings)
+        const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
         pipeline.push({
             $match:{
                 $or:[
-                    {title:{$regex:query,$options:"i"}},
-                    {description:{$regex:query,$options:"i"}}
+                    {title:{$regex:escapedQuery,$options:"i"}},
+                    {description:{$regex:escapedQuery,$options:"i"}}
                 ]
+            }
+        })
+    }
+
+    if(category){
+        pipeline.push({
+            $match:{
+                category
             }
         })
     }
@@ -46,7 +63,7 @@ const getAllVideos = asyncHandler(async(req,res)=>{
     pipeline.push(
         {
             $sort:{
-                [sortBy]: sortType === "asc"?1:-1
+                [effectiveSortBy]: sortType === "asc"?1:-1
             }
         }
     )
@@ -101,7 +118,7 @@ const publishAVideo = asyncHandler(async(req,res)=>{
 // Upload files to Cloudinary.
 // Save video information in MongoDB.
 // Return success.
-    const{title,description} = req.body
+    const{title,description,isPublished,category} = req.body
     if(!title?.trim()){
         throw new ApiError(400,"Title is required")
     }
@@ -132,9 +149,10 @@ const publishAVideo = asyncHandler(async(req,res)=>{
     thumbnailPublicId: thumbnail.public_id,
     title: title.trim(),
     description: description.trim(),
+    category: category?.trim() || "Other",
     duration: videoFile.duration,
     owner: req.user._id,
-    isPublished:true
+    isPublished: isPublished === undefined ? true : (isPublished === true || isPublished === "true")
 })
     if(!video){
         throw new ApiError(500,"Failed to publish video")
@@ -178,27 +196,59 @@ const getVideoById = asyncHandler(async(req,res)=>{
             $addFields:{
                 owner:{$first:"$owner"}
             }
+        },
+        {
+            // count likes for this video + whether the current user liked it
+            $lookup:{
+                from:"likes",
+                localField:"_id",
+                foreignField:"video",
+                as:"likes"
+            }
+        },
+        {
+            $addFields:{
+                likesCount:{$size:"$likes"},
+                isLiked: req.user
+                    ? {$in:[req.user._id, "$likes.likedBy"]}
+                    : false
+            }
+        },
+        {
+            // owner's subscriber count + whether current user is subscribed
+            $lookup:{
+                from:"subscriptions",
+                localField:"owner._id",
+                foreignField:"channel",
+                as:"ownerSubscribers"
+            }
+        },
+        {
+            $addFields:{
+                subscribersCount:{$size:"$ownerSubscribers"},
+                isSubscribed: req.user
+                    ? {$in:[req.user._id, "$ownerSubscribers.subscriber"]}
+                    : false
+            }
+        },
+        {
+            $project:{
+                likes:0,
+                ownerSubscribers:0
+            }
         }
     ])
     if(!video?.length){
         throw new ApiError(404,"Video not found")
     }
-    // await User.findByIdAndUpdate(req.user._id,{
-    //     $addToSet:{watchHistory:videoId}
-    // })
     if (req.user) {
-    await User.findByIdAndUpdate(req.user._id, {
-        $addToSet: { watchHistory: videoId }
-    })
-}
+        await User.findByIdAndUpdate(req.user._id, {
+            $addToSet: { watchHistory: new mongoose.Types.ObjectId(videoId) }
+        })
+    }
     return res
     .status(200)
     .json(new ApiResponse(200,video[0],"Video fetched successfully"))
-
-
-
-
-
 })
 const updateVideo = asyncHandler(async(req,res)=>{
     const{videoId} = req.params
