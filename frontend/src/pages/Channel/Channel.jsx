@@ -102,7 +102,7 @@ export default function Channel() {
                   <span className="mx-2">·</span>
                   {formatCount(channel.subscribersCount || 0)} subscribers
                   <span className="mx-2">·</span>
-                  {channel.channelsSubscribedToCount || 0} videos
+                  {channel.videoCount || 0} videos
                 </p>
               </div>
 

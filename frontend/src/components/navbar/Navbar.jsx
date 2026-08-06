@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../context/AuthContext"
+import api from "../../services/api"
+import Tooltip from "../ui/Tooltip"
+import useNotificationStream from "../../hooks/useNotificationStream"
 import {
   RiSearchLine, RiVideoAddLine, RiBellLine,
   RiArrowLeftLine, RiCloseLine, RiSettings3Line,
@@ -104,6 +107,37 @@ export default function Navbar() {
   const navigate                                  = useNavigate()
   const [searchOpen, setSearchOpen]               = useState(false)
   const [profileMenuOpen, setProfileMenuOpen]     = useState(false)
+  const [unreadCount, setUnreadCount]             = useState(0)
+
+  // Poll the unread notification count every 60s while logged in
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchUnreadCount() {
+      if (!user?._id) {
+        setUnreadCount(0)
+        return
+      }
+      try {
+        const res = await api.get("/notifications/unread-count")
+        if (!cancelled) setUnreadCount(res.data.data?.count || 0)
+      } catch {
+        // keep last known count on failure
+      }
+    }
+
+    fetchUnreadCount()
+    const interval = setInterval(fetchUnreadCount, 60_000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [user?._id])
+
+  // Real-time: the server pushes an event the instant notifications change,
+  // so the badge updates across windows without waiting for the poll.
+  useNotificationStream(!!user?._id, () => {
+    api.get("/notifications/unread-count")
+      .then(res => setUnreadCount(res.data.data?.count || 0))
+      .catch(() => { /* keep last known count */ })
+  })
 
   const initials = user?.fullname
     ? user.fullname.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
@@ -117,48 +151,63 @@ export default function Navbar() {
         <SearchBar onClose={() => setSearchOpen(false)} />
       ) : (
         <>
-          <div className="flex items-center gap-3 flex-1 max-w-2xl mx-auto">
+          {/* Invisible spacer mirroring the actions column so the search box
+              is dead-centered in the header, not just left of the buttons. */}
+          <div aria-hidden="true" className="hidden sm:block w-[150px] shrink-0" />
+
+          <div className="flex items-center gap-3 flex-1 max-w-2xl mx-auto min-w-[44px]">
             <button
               onClick={() => setSearchOpen(true)}
               aria-label="Open search"
-              className="flex flex-1 items-center bg-white/[0.05] border border-white/[0.07] rounded-full px-4 py-2 gap-3 hover:border-white/[0.14] transition-colors cursor-text"
+              className="flex flex-1 min-w-0 items-center bg-white/[0.05] border border-white/[0.07] rounded-full px-4 py-2 gap-3 hover:border-white/[0.14] transition-colors cursor-text"
             >
               <RiSearchLine className="text-zinc-500 text-[16px] shrink-0" />
-              <span className="text-sm text-zinc-600 select-none">Search creators and videos...</span>
+              <span className="hidden sm:inline min-w-0 truncate text-sm text-zinc-600 select-none">Search creators and videos...</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => navigate("/upload")}
-              aria-label="Upload video"
-              className="relative flex items-center justify-center w-9 h-9 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
-            >
-              <RiVideoAddLine className="text-[19px]" />
-            </button>
+          <div className="flex items-center gap-2 shrink-0 sm:w-[150px] sm:justify-end">
+            <Tooltip content="Upload video" position="bottom">
+              <button
+                onClick={() => navigate("/upload")}
+                aria-label="Upload video"
+                className="relative flex items-center justify-center w-9 h-9 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+              >
+                <RiVideoAddLine className="text-[19px]" />
+              </button>
+            </Tooltip>
 
-            <button
-              onClick={() => navigate("/notifications")}
-              aria-label="Notifications"
-              className="relative flex items-center justify-center w-9 h-9 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
-            >
-              <RiBellLine className="text-[19px]" />
-            </button>
+            <Tooltip content={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`} position="bottom">
+              <button
+                onClick={() => navigate("/notifications")}
+                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+                className="relative flex items-center justify-center w-9 h-9 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+              >
+                <RiBellLine className="text-[19px]" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-amber-500 text-zinc-950 text-[10px] font-bold flex items-center justify-center">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </button>
+            </Tooltip>
 
             <div className="relative ml-1">
               {user ? (
-                <button
-                  onClick={() => setProfileMenuOpen(p => !p)}
-                  aria-label="Open profile menu"
-                  aria-expanded={profileMenuOpen}
-                  aria-haspopup="menu"
-                  className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 text-sm font-semibold hover:bg-amber-500/30 transition-colors overflow-hidden"
-                >
-                  {user.avatar
-                    ? <img src={user.avatar} alt={user.fullname} className="w-full h-full object-cover" />
-                    : initials
-                  }
-                </button>
+                <Tooltip content={user.fullname || "Your profile"} position="bottom">
+                  <button
+                    onClick={() => setProfileMenuOpen(p => !p)}
+                    aria-label="Open profile menu"
+                    aria-expanded={profileMenuOpen}
+                    aria-haspopup="menu"
+                    className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 text-sm font-semibold hover:bg-amber-500/30 transition-colors overflow-hidden"
+                  >
+                    {user.avatar
+                      ? <img src={user.avatar} alt={user.fullname} className="w-full h-full object-cover" />
+                      : initials
+                    }
+                  </button>
+                </Tooltip>
               ) : (
                 <button
                   onClick={() => navigate("/login")}

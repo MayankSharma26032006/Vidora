@@ -1,17 +1,20 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { RiMoreLine, RiPlayCircleLine, RiBookmarkLine, RiShareLine } from "react-icons/ri"
+import {
+  RiMoreLine, RiPlayCircleLine, RiBookmarkLine, RiShareLine,
+} from "react-icons/ri"
 import { formatViews, formatDuration, formatTimeAgo } from "../../utils/formatters"
+import PlaylistPicker from "../playlists/PlaylistPicker"
 
 function ContextMenu({ videoId, onClose }) {
-  const [done, setDone] = useState(null)
-  const items = [
-    { key: "queue", icon: RiPlayCircleLine, label: "Add to queue",     doneLabel: "Added to queue"   },
-    { key: "save",  icon: RiBookmarkLine,   label: "Save to playlist", doneLabel: "Saved to playlist" },
-    { key: "share", icon: RiShareLine,      label: "Share",            doneLabel: "Link copied"       },
-  ]
+  const [view, setView]     = useState("main")
+  const [done, setDone]     = useState(null)
 
   function handleAction(item) {
+    if (item.key === "save") {
+      setView("playlists")
+      return
+    }
     if (item.key === "share") {
       const url = `${window.location.origin}/watch/${videoId}`
       navigator.clipboard?.writeText(url).catch(() => {})
@@ -20,15 +23,33 @@ function ContextMenu({ videoId, onClose }) {
     setTimeout(onClose, 1200)
   }
 
+  const mainItems = [
+    { key: "queue", icon: RiPlayCircleLine, label: "Add to queue",     doneLabel: "Added to queue"   },
+    { key: "save",  icon: RiBookmarkLine,   label: "Save to playlist", doneLabel: "Saved to playlist" },
+    { key: "share", icon: RiShareLine,      label: "Share",            doneLabel: "Link copied"       },
+  ]
+
   return (
-    <div role="menu" className="absolute right-0 top-8 w-44 bg-zinc-900 border border-white/[0.08] rounded-xl shadow-2xl shadow-black/60 overflow-hidden z-20" onMouseLeave={onClose}>
-      {items.map(item => (
-        <button key={item.label} role="menuitem" onClick={(e) => { e.stopPropagation(); handleAction(item) }}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">
-          <item.icon className="text-[15px] shrink-0" />
-          {done === item.key ? item.doneLabel : item.label}
-        </button>
-      ))}
+    <div
+      role="menu"
+      className="absolute right-0 top-8 bg-zinc-900 border border-white/[0.08] rounded-xl shadow-2xl shadow-black/60 overflow-hidden z-20"
+      onMouseLeave={onClose}
+    >
+      {view === "playlists" ? (
+        <PlaylistPicker videoId={videoId} onBack={() => setView("main")} onClose={onClose} />
+      ) : (
+        mainItems.map(item => (
+          <button
+            key={item.key}
+            role="menuitem"
+            onClick={(e) => { e.stopPropagation(); handleAction(item) }}
+            className="w-44 flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors"
+          >
+            <item.icon className="text-[15px] shrink-0" />
+            {done === item.key ? item.doneLabel : item.label}
+          </button>
+        ))
+      )}
     </div>
   )
 }

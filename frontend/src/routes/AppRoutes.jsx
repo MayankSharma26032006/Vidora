@@ -11,6 +11,7 @@ const Search        = lazy(() => import("../pages/Search/Search"))
 const Explore       = lazy(() => import("../pages/Explore/Explore"))
 const Trending      = lazy(() => import("../pages/Trending/Trending"))
 const LikedVideos   = lazy(() => import("../pages/LikedVideos/LikedVideos"))
+const Saved         = lazy(() => import("../pages/Saved/Saved"))
 const Playlists     = lazy(() => import("../pages/Playlists/Playlists"))
 const History       = lazy(() => import("../pages/History/History"))
 const Subscriptions = lazy(() => import("../pages/Subscriptions/Subscriptions"))
@@ -44,6 +45,7 @@ export default function AppRoutes() {
           <Route path="/explore"           element={<Explore />} />
           <Route path="/trending"          element={<Trending />} />
           <Route path="/liked-videos"      element={<LikedVideos />} />
+          <Route path="/saved"             element={<Saved />} />
           <Route path="/playlists"         element={<Playlists />} />
           <Route path="/history"           element={<History />} />
           <Route path="/subscriptions"     element={<Subscriptions />} />

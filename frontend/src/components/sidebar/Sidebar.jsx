@@ -1,11 +1,13 @@
 import { useState } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
+import Logo from "../ui/Logo"
 import {
   RiHome5Line, RiHome5Fill,
   RiCompassLine, RiCompassFill,
   RiFireLine, RiFireFill,
   RiTimeLine, RiTimeFill,
   RiThumbUpLine, RiThumbUpFill,
+  RiBookmarkLine, RiBookmarkFill,
   RiPlayListLine, RiPlayListFill,
   RiUserFollowLine, RiUserFollowFill,
   RiDashboardLine, RiDashboardFill,
@@ -22,6 +24,7 @@ const mainNav = [
 const youNav = [
   { label: "History",       path: "/history",       icon: RiTimeLine,       activeIcon: RiTimeFill       },
   { label: "Liked videos",  path: "/liked-videos",  icon: RiThumbUpLine,    activeIcon: RiThumbUpFill    },
+  { label: "Saved videos",  path: "/saved",         icon: RiBookmarkLine,   activeIcon: RiBookmarkFill   },
   { label: "Playlists",     path: "/playlists",     icon: RiPlayListLine,   activeIcon: RiPlayListFill   },
   { label: "Subscriptions", path: "/subscriptions", icon: RiUserFollowLine, activeIcon: RiUserFollowFill },
 ]
@@ -87,9 +90,8 @@ export default function Sidebar() {
         ${collapsed ? "w-[64px]" : "w-[220px]"}
       `}
     >
-      <div className={`flex items-center h-14 px-4 border-b border-white/[0.06] ${collapsed ? "justify-center" : "gap-2"}`}>
-      {/* Below span i have to include Logo */}
-        <span className="text-amber-400 text-xl leading-none" aria-hidden="true"></span>
+      <div className={`flex items-center h-14 px-4 border-b border-white/[0.06] ${collapsed ? "justify-center" : "gap-2.5"}`}>
+        <Logo size={30} className="shrink-0" />
         {!collapsed && (
           <span className="text-white font-semibold text-base tracking-tight">
             Vid<span className="text-amber-400">Ora</span>
@@ -142,6 +144,7 @@ export default function Sidebar() {
       <button
         onClick={() => setCollapsed(prev => !prev)}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         aria-expanded={!collapsed}
         className="absolute -right-3 top-[52px] z-10 w-6 h-6 rounded-full bg-zinc-800 border border-white/10 flex items-center justify-center text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors duration-150"
       >

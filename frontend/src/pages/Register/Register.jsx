@@ -2,6 +2,7 @@ import { useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { RiEyeLine, RiEyeOffLine, RiCheckLine, RiUploadLine, RiCloseLine } from "react-icons/ri"
 import { useAuth } from "../../context/AuthContext"
+import Logo from "../../components/ui/Logo"
 
 export default function Register() {
   const [fullname, setFullname] = useState("")
@@ -59,10 +60,10 @@ export default function Register() {
         <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent" />
         <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-amber-500/5 blur-3xl" />
 
-        <div className="relative z-10 flex items-center gap-2">
-          <span className="text-amber-400 text-2xl">▶</span>
+        <div className="relative z-10 flex items-center gap-2.5">
+          <Logo size={30} className="shrink-0" />
           <span className="text-white font-bold text-xl tracking-tight">
-            Creator<span className="text-amber-400">Hub</span>
+            Vid<span className="text-amber-400">Ora</span>
           </span>
         </div>
 
@@ -104,9 +105,9 @@ export default function Register() {
       <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
         <div className="w-full max-w-md py-8">
 
-          <div className="lg:hidden flex items-center gap-2 mb-8">
-            <span className="text-amber-400 text-xl">▶</span>
-            <span className="text-white font-bold text-lg">Creator<span className="text-amber-400">Hub</span></span>
+          <div className="lg:hidden flex items-center gap-2.5 mb-8">
+            <Logo size={26} className="shrink-0" />
+            <span className="text-white font-bold text-lg">Vid<span className="text-amber-400">Ora</span></span>
           </div>
 
           <div className="mb-8">

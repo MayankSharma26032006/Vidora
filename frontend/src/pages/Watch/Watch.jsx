@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import VideoCard from "../../components/cards/VideoCard"
 import Avatar from "../../components/ui/Avatar"
 import { VideoPlayer, CommentSection } from "../../components/video"
+import PlaylistPicker from "../../components/playlists/PlaylistPicker"
 import { useAuth } from "../../context/AuthContext"
 import api from "../../services/api"
 import {
@@ -39,6 +40,8 @@ export default function Watch() {
   const [subscribed, setSubscribed]       = useState(false)
   const [saved, setSaved]                 = useState(false)
   const [moreOpen, setMoreOpen]           = useState(false)
+  const [moreView, setMoreView]           = useState("main") // "main" | "playlists"
+  const moreRef                           = useRef(null)
   const [loading, setLoading]             = useState(true)
   const [error, setError]                 = useState("")
 
@@ -54,6 +57,7 @@ export default function Watch() {
         setVideo(res.data.data)
         setLiked(!!res.data.data.isLiked)
         setSubscribed(!!res.data.data.isSubscribed)
+        setSaved(!!res.data.data.isSaved)
       } catch {
         if (!cancelled) setError("Video not found.")
       } finally {
@@ -96,6 +100,16 @@ export default function Watch() {
     }
   }
 
+  async function handleSave() {
+    if (!user) { navigate("/login"); return }
+    try {
+      await api.post(`/user/saved-videos/${videoId}`)
+      setSaved(p => !p)
+    } catch {
+      // keep current state on failure
+    }
+  }
+
   function handleShare() {
     const url = `${window.location.origin}/watch/${videoId}`
     navigator.clipboard?.writeText(url).catch(() => {})
@@ -104,6 +118,23 @@ export default function Watch() {
   function handleReport() {
     setMoreOpen(false)
   }
+
+  function openMore() {
+    setMoreView("main")
+    setMoreOpen(p => !p)
+  }
+
+  // close the menu (and reset its sub-view) when clicking anywhere outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (moreRef.current && !moreRef.current.contains(e.target)) {
+        setMoreOpen(false)
+        setMoreView("main")
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   if (loading) {
     return (
@@ -153,10 +184,10 @@ export default function Watch() {
                   <span>{formatViews((video?.likesCount || 0) + (liked ? 1 : 0))}</span>
                 </button>
                 <button
-                  onClick={() => setSaved(p => !p)}
+                  onClick={handleSave}
                   className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all ${saved ? "bg-amber-500/15 border-amber-500/40 text-amber-400" : "bg-white/[0.06] border-white/[0.08] text-zinc-400 hover:bg-white/[0.1] hover:text-zinc-200"}`}
                 >
-                  <RiBookmarkLine className="text-[16px]" /> Save
+                  <RiBookmarkLine className="text-[16px]" /> {saved ? "Saved" : "Save"}
                 </button>
                 <button
                   onClick={handleShare}
@@ -164,15 +195,26 @@ export default function Watch() {
                 >
                   <RiShareLine className="text-[16px]" /> Share
                 </button>
-                <div className="relative">
-                  <button onClick={() => setMoreOpen(p => !p)} aria-label="More options" className="flex items-center justify-center w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.08] text-zinc-400 hover:text-zinc-200 transition-all">
+                <div className="relative" ref={moreRef}>
+                  <button onClick={openMore} aria-label="More options" className="flex items-center justify-center w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.08] text-zinc-400 hover:text-zinc-200 transition-all">
                     <RiMoreLine className="text-[16px]" />
                   </button>
                   {moreOpen && (
-                    <div className="absolute right-0 top-10 w-40 bg-zinc-900 border border-white/[0.08] rounded-xl shadow-2xl shadow-black/60 overflow-hidden z-20">
-                      <button onClick={handleReport} className="w-full text-left px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">Report</button>
-                      <button onClick={handleShare} className="w-full text-left px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">Copy link</button>
-                    </div>
+                    moreView === "playlists" ? (
+                      <div className="absolute right-0 top-10 bg-zinc-900 border border-white/[0.08] rounded-xl shadow-2xl shadow-black/60 overflow-hidden z-20">
+                        <PlaylistPicker
+                          videoId={videoId}
+                          onBack={() => setMoreView("main")}
+                          onClose={() => { setMoreOpen(false); setMoreView("main") }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="absolute right-0 top-10 w-40 bg-zinc-900 border border-white/[0.08] rounded-xl shadow-2xl shadow-black/60 overflow-hidden z-20">
+                        <button onClick={() => setMoreView("playlists")} className="w-full text-left px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">Save to playlist</button>
+                        <button onClick={handleReport} className="w-full text-left px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">Report</button>
+                        <button onClick={() => { handleShare(); setMoreOpen(false) }} className="w-full text-left px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">Copy link</button>
+                      </div>
+                    )
                   )}
                 </div>
               </div>

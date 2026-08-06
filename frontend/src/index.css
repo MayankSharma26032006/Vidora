@@ -42,10 +42,14 @@ body {
 }
 
 /* ─── Images ────────────────────────────────────────────────────── */
-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
+/* Keep image resets in the base layer so utility classes
+   (width, height, object-fit) can still force thumbnails into a fixed box. */
+@layer base {
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
 }
 
 /* ─── Inputs ────────────────────────────────────────────────────── */

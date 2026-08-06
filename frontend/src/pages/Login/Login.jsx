@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { RiEyeLine, RiEyeOffLine, RiCheckLine } from "react-icons/ri"
 import { useAuth } from "../../context/AuthContext"
+import Logo from "../../components/ui/Logo"
 
 export default function Login() {
   const [email, setEmail]       = useState("")
@@ -39,10 +40,10 @@ export default function Login() {
         <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-amber-500/5 blur-3xl" />
 
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-amber-400 text-2xl">▶</span>
+          <div className="flex items-center gap-2.5 mb-2">
+            <Logo size={30} className="shrink-0" />
             <span className="text-white font-bold text-xl tracking-tight">
-              Creator<span className="text-amber-400">Hub</span>
+              Vid<span className="text-amber-400">Ora</span>
             </span>
           </div>
         </div>
@@ -50,7 +51,7 @@ export default function Login() {
         <div className="relative z-10">
           <div className="w-full aspect-video rounded-2xl bg-zinc-800 border border-white/[0.06] flex items-center justify-center mb-8 overflow-hidden">
             <div className="flex flex-col items-center gap-3 text-zinc-600">
-              <span className="text-6xl text-amber-400">▶</span>
+              <Logo size={76} className="opacity-90" />
               <span className="text-sm">Your content, your audience</span>
             </div>
           </div>
@@ -76,10 +77,10 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
 
-          <div className="lg:hidden flex items-center gap-2 mb-8">
-            <span className="text-amber-400 text-xl">▶</span>
+          <div className="lg:hidden flex items-center gap-2.5 mb-8">
+            <Logo size={26} className="shrink-0" />
             <span className="text-white font-bold text-lg tracking-tight">
-              Creator<span className="text-amber-400">Hub</span>
+              Vid<span className="text-amber-400">Ora</span>
             </span>
           </div>
 

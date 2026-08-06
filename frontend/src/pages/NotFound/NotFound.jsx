@@ -1,4 +1,5 @@
 import { RiHome5Line, RiCompassLine } from "react-icons/ri"
+import Logo from "../../components/ui/Logo"
 
 export default function NotFound() {
   return (
@@ -7,10 +8,10 @@ export default function NotFound() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-amber-500/3 blur-3xl" />
 
       <div className="relative z-10 flex flex-col items-center text-center max-w-md">
-        <div className="flex items-center gap-2 mb-12">
-          <span className="text-amber-400 text-2xl">▶</span>
+        <div className="flex items-center gap-2.5 mb-12">
+          <Logo size={30} className="shrink-0" />
           <span className="text-white font-bold text-xl tracking-tight">
-            Creator<span className="text-amber-400">Hub</span>
+            Vid<span className="text-amber-400">Ora</span>
           </span>
         </div>
 

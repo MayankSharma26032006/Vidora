@@ -68,18 +68,45 @@ function PasswordInput({ value, onChange, show, onToggle, placeholder, autoCompl
 }
 
 function ProfileTab({ user }) {
-  const [fullname, setFullname]     = useState(user?.fullname || "")
-  const [email, setEmail]           = useState(user?.email || "")
-  const [preview, setPreview]       = useState(user?.avatar || null)
-  const [avatarFile, setAvatarFile] = useState(null)
-  const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState("")
+  const { getCurrentUser }         = useAuth()
+  const [fullname, setFullname]    = useState(user?.fullname || "")
+  const [email, setEmail]          = useState(user?.email || "")
+  const [preview, setPreview]      = useState(user?.avatar || null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarStatus, setAvatarStatus]       = useState("") // "ok" | "error" | ""
+  const [avatarMsg, setAvatarMsg] = useState("")
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState("")
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const avatarRef                   = useRef(null)
+  const avatarRef                 = useRef(null)
 
-  function handleAvatarChange(e) {
+  // Picking a photo uploads it immediately (no hidden save step), then
+  // refreshes the auth context so the new avatar shows everywhere at once.
+  async function handleAvatarChange(e) {
     const file = e.target.files[0]
-    if (file) { setAvatarFile(file); setPreview(URL.createObjectURL(file)) }
+    if (!file) return
+    const blobUrl = URL.createObjectURL(file)
+    setPreview(blobUrl)
+    setAvatarUploading(true)
+    setAvatarStatus("")
+    setAvatarMsg("")
+    try {
+      const fd = new FormData()
+      fd.append("avatar", file)
+      await api.patch("/user/update-avatar", fd, { headers: { "Content-Type": "multipart/form-data" } })
+      URL.revokeObjectURL(blobUrl)
+      setAvatarStatus("ok")
+      setAvatarMsg("Profile photo updated")
+      await getCurrentUser()
+    } catch (err) {
+      // don't show a photo that was never saved — revert to the persisted avatar
+      URL.revokeObjectURL(blobUrl)
+      setPreview(user?.avatar || null)
+      setAvatarStatus("error")
+      setAvatarMsg(err.response?.data?.message || "Couldn't upload photo. Try again.")
+    } finally {
+      setAvatarUploading(false)
+    }
   }
 
   async function handleSave() {
@@ -87,11 +114,7 @@ function ProfileTab({ user }) {
     setLoading(true)
     try {
       await api.patch("/user/update-account", { fullName: fullname, email })
-      if (avatarFile) {
-        const fd = new FormData()
-        fd.append("avatar", avatarFile)
-        await api.patch("/user/update-avatar", fd, { headers: { "Content-Type": "multipart/form-data" } })
-      }
+      await getCurrentUser() // keep the navbar/profile menu in sync
     } catch (err) {
       setError(err.response?.data?.message || "Failed to save changes.")
     } finally {
@@ -106,16 +129,29 @@ function ProfileTab({ user }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <SectionCard title="Profile Picture" description="Upload a photo that represents you.">
+      <SectionCard title="Profile Picture" description="Upload a photo that represents you — it updates everywhere instantly.">
         <div className="flex items-center gap-5">
           <div className="w-20 h-20 rounded-full bg-amber-500/20 border-2 border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl font-bold overflow-hidden shrink-0">
             {preview ? <img src={preview} alt="avatar" className="w-full h-full object-cover" /> : (user?.fullname?.[0] || "M")}
           </div>
           <div className="flex flex-col gap-2">
-            <button onClick={() => avatarRef.current?.click()} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/[0.1] text-sm text-zinc-300 hover:border-white/[0.2] hover:text-white transition-all">
-              <RiUploadLine className="text-[15px]" /> Upload photo
+            <button
+              onClick={() => avatarRef.current?.click()}
+              disabled={avatarUploading}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/[0.1] text-sm text-zinc-300 hover:border-white/[0.2] hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {avatarUploading ? (
+                <>
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <><RiUploadLine className="text-[15px]" /> Upload photo</>
+              )}
             </button>
             <p className="text-xs text-zinc-600">JPG or PNG. Max 2MB.</p>
+            {avatarStatus === "ok" && <p className="text-xs text-emerald-400 flex items-center gap-1"><RiCheckLine /> {avatarMsg}</p>}
+            {avatarStatus === "error" && <p className="text-xs text-red-400">{avatarMsg}</p>}
             <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
           </div>
         </div>
