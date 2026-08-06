@@ -1,6 +1,8 @@
 import mongoose, { isValidObjectId } from "mongoose"
 import { Video } from "../models/video.model.js"
 import { User } from "../models/user.model.js"
+import { Notification } from "../models/notification.model.js"
+import { Like } from "../models/like.model.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
@@ -32,42 +34,9 @@ const getAllVideos = asyncHandler(async(req,res)=>{
         }
     })
     }
-    
 
-    if(query){
-        // Escape regex metacharacters so user input is a literal contains-search
-        // (prevents ReDoS via pathological regex strings)
-        const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-        pipeline.push({
-            $match:{
-                $or:[
-                    {title:{$regex:escapedQuery,$options:"i"}},
-                    {description:{$regex:escapedQuery,$options:"i"}}
-                ]
-            }
-        })
-    }
-
-    if(category){
-        pipeline.push({
-            $match:{
-                category
-            }
-        })
-    }
-    
-    pipeline.push({
-        $match:{isPublished:true}
-    })
-
-    pipeline.push(
-        {
-            $sort:{
-                [effectiveSortBy]: sortType === "asc"?1:-1
-            }
-        }
-    )
-
+    // Join the owner document early so search can also match channel names
+    // (YouTube-style: typing a channel name surfaces that channel's videos)
     pipeline.push(
         {
             $lookup:{
@@ -89,6 +58,42 @@ const getAllVideos = asyncHandler(async(req,res)=>{
         {
             $addFields:{
                 owner:{$first:"$owner"}
+            }
+        }
+    )
+
+    if(query){
+        // Escape regex metacharacters so user input is a literal contains-search
+        // (prevents ReDoS via pathological regex strings)
+        const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        pipeline.push({
+            $match:{
+                $or:[
+                    {title:{$regex:escapedQuery,$options:"i"}},
+                    {description:{$regex:escapedQuery,$options:"i"}},
+                    {"owner.username":{$regex:escapedQuery,$options:"i"}},
+                    {"owner.fullname":{$regex:escapedQuery,$options:"i"}}
+                ]
+            }
+        })
+    }
+
+    if(category){
+        pipeline.push({
+            $match:{
+                category
+            }
+        })
+    }
+    
+    pipeline.push({
+        $match:{isPublished:true}
+    })
+
+    pipeline.push(
+        {
+            $sort:{
+                [effectiveSortBy]: sortType === "asc"?1:-1
             }
         }
     )
@@ -245,6 +250,9 @@ const getVideoById = asyncHandler(async(req,res)=>{
         await User.findByIdAndUpdate(req.user._id, {
             $addToSet: { watchHistory: new mongoose.Types.ObjectId(videoId) }
         })
+        video[0].isSaved = (req.user.savedVideos || []).some(id => id.toString() === videoId)
+    } else {
+        video[0].isSaved = false
     }
     return res
     .status(200)
@@ -307,6 +315,13 @@ const deleteVideo = asyncHandler(async(req,res)=>{
         {watchHistory:videoId},
         {$pull:{watchHistory:videoId}}
     )
+    await User.updateMany(
+        {savedVideos:videoId},
+        {$pull:{savedVideos:videoId}}
+    )
+    // clean up notifications and likes that referenced the deleted video
+    await Notification.deleteMany({ video: videoId })
+    await Like.deleteMany({ video: videoId })
     await deleteFromCloudinary(video.videoFilePublicId, "video")
     await deleteFromCloudinary(video.thumbnailPublicId, "image")
         return res

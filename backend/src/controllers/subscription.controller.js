@@ -3,6 +3,7 @@ import { Subscription } from "../models/subscription.model.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
+import { createNotification, removeNotification } from "../utils/notify.js"
 
 
 const toggleSubscription = asyncHandler(async (req, res) => {
@@ -24,6 +25,12 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 
     if (existingSubscription) {
         await Subscription.findByIdAndDelete(existingSubscription._id)
+        // undo the notification when unsubscribed
+        await removeNotification({
+            owner: channelId,
+            actor: req.user._id,
+            type: "subscribe"
+        })
         return res
             .status(200)
             .json(new ApiResponse(200, { isSubscribed: false }, "Unsubscribed successfully"))
@@ -32,6 +39,13 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     await Subscription.create({
         subscriber: req.user._id,
         channel: channelId
+    })
+
+    // notify the channel about the new subscriber
+    await createNotification({
+        owner: channelId,
+        actor: req.user._id,
+        type: "subscribe"
     })
 
     return res

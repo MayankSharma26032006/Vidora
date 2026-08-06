@@ -1,8 +1,10 @@
 import mongoose, { isValidObjectId } from "mongoose"
 import { Comment } from "../models/comment.model.js"
+import { Video } from "../models/video.model.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
+import { createNotification, removeNotification } from "../utils/notify.js"
 
 
 const getVideoComments = asyncHandler(async (req, res) => {
@@ -85,6 +87,15 @@ const addComment = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Something went wrong while adding comment")
     }
 
+    // notify the video owner about the new comment
+    const video = await Video.findById(videoId).select("owner")
+    await createNotification({
+        owner: video?.owner,
+        actor: req.user._id,
+        type: "comment",
+        video: videoId
+    })
+
     return res
         .status(201)
         .json(new ApiResponse(201, comment, "Comment added successfully"))
@@ -144,7 +155,18 @@ const deleteComment = asyncHandler(async (req, res) => {
         throw new ApiError(403, "You are not allowed to delete this comment")
     }
 
-    await Comment.findByIdAndDelete(commentId)
+    const deletedComment = await Comment.findByIdAndDelete(commentId)
+
+    // undo the notification when a comment is removed
+    if (deletedComment) {
+      const video = await Video.findById(deletedComment.video).select("owner")
+      await removeNotification({
+        owner: video?.owner,
+        actor: req.user._id,
+        type: "comment",
+        video: deletedComment.video
+      })
+    }
 
     return res
         .status(200)

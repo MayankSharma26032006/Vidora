@@ -6,13 +6,10 @@ import { asyncHandler } from "../utils/asyncHandler.js"
 
 
 const createPlaylist = asyncHandler(async (req, res) => {
-    const { name, description } = req.body
+    const { name, description = "" } = req.body
 
     if (!name?.trim()) {
         throw new ApiError(400, "Playlist name is required")
-    }
-    if (!description?.trim()) {
-        throw new ApiError(400, "Playlist description is required")
     }
 
     const playlist = await Playlist.create({
@@ -75,7 +72,8 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
                 description: 1,
                 totalVideos: 1,
                 totalViews: 1,
-                updatedAt: 1
+                updatedAt: 1,
+                videoIds: { $map: { input: "$videos", as: "v", in: "$$v._id" } }
             }
         }
     ])

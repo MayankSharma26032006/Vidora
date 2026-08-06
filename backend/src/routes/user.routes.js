@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { loginUser, logOutUser, registerUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updateUserAvatar, updateCoverImage, getUserChannelProfile, getWatchHistory } from "../controllers/user.controller.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { loginUser, logOutUser, registerUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updateUserAvatar, updateCoverImage, getUserChannelProfile, getWatchHistory, toggleSaveVideo, getSavedVideos } from "../controllers/user.controller.js";
+import { verifyJWT, optionalAuth } from "../middlewares/auth.middleware.js";
 import {upload} from "../middlewares/multer.middleware.js";
 const router = Router();
 
@@ -27,6 +27,8 @@ router.route("/current-user").get(verifyJWT, getCurrentUser)
 router.route("/update-account").patch(verifyJWT, updateAccountDetails)
 router.route("/update-avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
 router.route("/update-cover").patch(verifyJWT, upload.single("coverImage"), updateCoverImage)
-router.route("/channel-profile/:username").get(getUserChannelProfile)
+router.route("/channel-profile/:username").get(optionalAuth, getUserChannelProfile)
 router.route("/watch-history").get(verifyJWT, getWatchHistory)
+router.route("/saved-videos/:videoId").post(verifyJWT, toggleSaveVideo)
+router.route("/saved-videos").get(verifyJWT, getSavedVideos)
 export default router;

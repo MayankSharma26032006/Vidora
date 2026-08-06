@@ -1,10 +1,11 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js"
 import{User} from "../models/user.model.js"
+import { Video } from "../models/video.model.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import {ApiResponse} from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 
 const cookieOptions = {
   httpOnly: true,
@@ -43,21 +44,10 @@ const generateAccessAndRefreshTokens = async (userId) => {
 
 
 const registerUser = asyncHandler(async (req, res) => {
-  // console.log('ENTER registerUser')
-
-
-  // get user details
-  // validation - not empty
-  // check if user already exists
-  // check for img, avatar
-  // upload img to cloudinary, avatar
-  // create user object - create entry in db
-  // remove password, refresh token from response
-  // check for user creation
-  // return response
+  // get user details, validate, check existing, upload avatar,
+  // create user, return without password/refresh token
 
   const { fullName, email, username, password } = req.body;
-  // console.log("email:", email);
   if (!fullName?.trim()) {
       throw new ApiError(400, "Full name is required")
   }
@@ -79,10 +69,6 @@ const registerUser = asyncHandler(async (req, res) => {
   if(existedUser){
     throw new ApiError(409,"User already exists")
   }
-
-  // console.log('DEBUG content-type:', req.headers['content-type'])
-  // console.log('DEBUG req.files:', req.files)
-  // console.log('DEBUG req.body:', req.body)
 
   const avatarLocalPath = req.files?.avatar?.[0]?.path
   let coverImageLocalPath;
@@ -226,12 +212,21 @@ const refreshAccessToken = asyncHandler(async(req,res)=>{
 })
 const changeCurrentPassword = asyncHandler(async(req,res)=>{
   const{oldPassword, newPassword} = req.body
+  if(!oldPassword || !newPassword){
+    throw new ApiError(400,"Old and new password are required")
+  }
   const user = await User.findById(req.user?._id)
+  if(!user){
+    throw new ApiError(404,"User not found")
+  }
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
   if(!isPasswordCorrect){
     throw new ApiError(400,"Invalid old password")
   }
   user.password = newPassword
+  // revoke all existing sessions: the stored refresh token no longer matches
+  // any refresh cookie, so old devices are logged out on their next refresh
+  user.refreshToken = undefined
   await user.save({validateBeforeSave:false})
   return res
   .status(200)
@@ -272,7 +267,9 @@ const updateAccountDetails = asyncHandler(async(req,res)=>{
 })
 
 const updateUserAvatar = asyncHandler(async(req,res)=>{
-  const avatarLocalPath = req.files?.avatar?.[0]?.path
+  // upload.single("avatar") populates req.file; support both shapes so the
+  // endpoint works whether multer was configured with .single() or .fields()
+  const avatarLocalPath = req.file?.path || req.files?.avatar?.[0]?.path
   if(!avatarLocalPath){
     throw new ApiError(400,"Avatar file is missing")
   }
@@ -302,7 +299,8 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
   )
 })
 const updateCoverImage = asyncHandler(async(req,res)=>{
-  const coverImageLocalPath = req.files?.coverImage?.[0]?.path
+  // upload.single("coverImage") populates req.file; support both shapes
+  const coverImageLocalPath = req.file?.path || req.files?.coverImage?.[0]?.path
   if(!coverImageLocalPath){
     throw new ApiError(400,"Cover image is missing")
   }
@@ -359,12 +357,24 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
       }
     },
     {
+      $lookup:{
+        from:"videos",
+        localField:"_id",
+        foreignField:"owner",
+        as:"channelVideos"
+
+      }
+    },
+    {
       $addFields:{
         subscribersCount:{
           $size:"$subscribers"
         },
         channelsSubscribedToCount:{
           $size:"$subscribedTo"
+        },
+        videoCount:{
+          $size:"$channelVideos"
         },
         isSubscribed:{
           $cond:{
@@ -381,6 +391,7 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
         username:1,
         subscribersCount:1,
         channelsSubscribedToCount:1,
+        videoCount:1,
         isSubscribed:1,
         avatar:1,
         coverImage:1,
@@ -399,6 +410,80 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
 
 
 })
+const toggleSaveVideo = asyncHandler(async(req,res)=>{
+  const { videoId } = req.params
+  if(!isValidObjectId(videoId)){
+    throw new ApiError(400, "Invalid video ID")
+  }
+  const video = await Video.findById(videoId)
+  if(!video){
+    throw new ApiError(404, "Video not found")
+  }
+
+  const user = await User.findById(req.user._id)
+  const hasSaved = user.savedVideos.some(id => id.toString() === videoId)
+
+  if(hasSaved){
+    user.savedVideos = user.savedVideos.filter(id => id.toString() !== videoId)
+  } else {
+    user.savedVideos.push(videoId)
+  }
+  await user.save({ validateBeforeSave: false })
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { saved: !hasSaved }, hasSaved ? "Removed from saved videos" : "Video saved successfully"))
+})
+
+const getSavedVideos = asyncHandler(async(req,res)=>{
+  const user = await User.aggregate([
+    {
+      $match:{
+        _id: new mongoose.Types.ObjectId(req.user._id)
+      }
+    },
+    {
+      $lookup:{
+        from:"videos",
+        localField:"savedVideos",
+        foreignField:"_id",
+        as:"savedVideos",
+        pipeline:[
+          {
+            $lookup:{
+              from:"users",
+              localField:"owner",
+              foreignField:"_id",
+              as:"owner",
+              pipeline:[
+                {
+                  $project:{
+                    fullname:1,
+                    username:1,
+                    avatar:1
+                  }
+                }
+              ]
+            }
+          },
+          {
+            $addFields:{
+              owner:{
+                $first:"$owner"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ])
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, user[0]?.savedVideos || [], "Saved videos fetched successfully")
+    )
+})
+
 const getWatchHistory = asyncHandler(async(req,res)=>{
   const user = await User.aggregate([
     {
@@ -422,7 +507,7 @@ const getWatchHistory = asyncHandler(async(req,res)=>{
               pipeline:[
                 {
                   $project:{
-                    fullName:1,
+                    fullname:1,
                     username:1,
                     avatar:1
                   }
@@ -459,6 +544,8 @@ export { registerUser,
   getUserChannelProfile,
   getWatchHistory,
   updateCoverImage,
-  updateAccountDetails
+  updateAccountDetails,
+  toggleSaveVideo,
+  getSavedVideos
 
  };
