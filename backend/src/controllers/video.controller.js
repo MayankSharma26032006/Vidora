@@ -153,7 +153,7 @@ const publishAVideo = asyncHandler(async(req,res)=>{
     thumbnail: thumbnail.url,
     thumbnailPublicId: thumbnail.public_id,
     title: title.trim(),
-    description: description.trim(),
+    description: (description || "").trim(),
     category: category?.trim() || "Other",
     duration: videoFile.duration,
     owner: req.user._id,
@@ -292,7 +292,7 @@ const updateVideo = asyncHandler(async(req,res)=>{
 }
     const updatedVideo = await Video.findByIdAndUpdate(videoId,{
         $set:updateFields
-    },{new:true})
+    },{ returnDocument: 'after' })
     return res
     .status(200)
     .json(new ApiResponse(200,updatedVideo,"Video updated successfully"))

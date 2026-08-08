@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { NavLink, useNavigate } from "react-router-dom"
+import { Link, NavLink, useNavigate } from "react-router-dom"
 import Logo from "../ui/Logo"
 import {
   RiHome5Line, RiHome5Fill,
@@ -11,14 +11,16 @@ import {
   RiPlayListLine, RiPlayListFill,
   RiUserFollowLine, RiUserFollowFill,
   RiDashboardLine, RiDashboardFill,
+  RiGroupLine, RiGroupFill,
   RiVideoAddLine,
   RiMenuFoldLine, RiMenuUnfoldLine,
 } from "react-icons/ri"
 
 const mainNav = [
-  { label: "Home",     path: "/",         icon: RiHome5Line,       activeIcon: RiHome5Fill      },
-  { label: "Explore",  path: "/explore",  icon: RiCompassLine,     activeIcon: RiCompassFill    },
-  { label: "Trending", path: "/trending", icon: RiFireLine,        activeIcon: RiFireFill       },
+  { label: "Home",      path: "/",          icon: RiHome5Line,       activeIcon: RiHome5Fill      },
+  { label: "Explore",   path: "/explore",   icon: RiCompassLine,     activeIcon: RiCompassFill    },
+  { label: "Trending",  path: "/trending",  icon: RiFireLine,        activeIcon: RiFireFill       },
+  { label: "Community", path: "/community", icon: RiGroupLine,       activeIcon: RiGroupFill      },
 ]
 
 const youNav = [
@@ -90,13 +92,20 @@ export default function Sidebar() {
         ${collapsed ? "w-[64px]" : "w-[220px]"}
       `}
     >
-      <div className={`flex items-center h-14 px-4 border-b border-white/[0.06] ${collapsed ? "justify-center" : "gap-2.5"}`}>
-        <Logo size={30} className="shrink-0" />
-        {!collapsed && (
-          <span className="text-white font-semibold text-base tracking-tight">
-            Vid<span className="text-amber-400">Ora</span>
-          </span>
-        )}
+      <div className={`flex items-center h-14 px-4 border-b border-white/[0.06] ${collapsed ? "justify-center" : ""}`}>
+        <Link
+          to="/"
+          aria-label="VidOra home"
+          title="VidOra home"
+          className={`flex items-center shrink-0 min-w-0 transition-opacity hover:opacity-80 ${collapsed ? "justify-center" : "gap-2.5"}`}
+        >
+          <Logo size={30} className="shrink-0" />
+          {!collapsed && (
+            <span className="text-white font-semibold text-base tracking-tight">
+              Vid<span className="text-amber-400">Ora</span>
+            </span>
+          )}
+        </Link>
       </div>
 
       <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-3 ${collapsed ? "px-2" : "px-3"}`}>
@@ -146,7 +155,7 @@ export default function Sidebar() {
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         aria-expanded={!collapsed}
-        className="absolute -right-3 top-[52px] z-10 w-6 h-6 rounded-full bg-zinc-800 border border-white/10 flex items-center justify-center text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors duration-150"
+        className="absolute -right-3 top-[60px] z-10 w-6 h-6 rounded-full bg-zinc-800 border border-white/10 flex items-center justify-center text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors duration-150"
       >
         {collapsed
           ? <RiMenuUnfoldLine className="text-[13px]" aria-hidden="true" />

@@ -36,6 +36,12 @@ describe("POST /api/v1/videos", () => {
     expect(res.body.message).toBe("Title is required")
   })
 
+  it("rejects a missing description with 400", async () => {
+    const { accessCookie } = await registerAndLogin()
+    const res = await createVideo(accessCookie, { description: "" }).expect(400)
+    expect(res.body.message).toBe("Description is required")
+  })
+
   it("rejects a missing video file with 400", async () => {
     const { accessCookie } = await registerAndLogin()
     const res = await request(app)

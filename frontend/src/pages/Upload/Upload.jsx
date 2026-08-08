@@ -10,7 +10,7 @@ import {
 
 const UPLOAD_CATEGORIES = ["Select a category", ...CATEGORIES]
 
-function VideoUploadZone({ file, progress, onFile }) {
+function VideoUploadZone({ file, progress, onFile, error }) {
   const inputRef = useRef(null)
   const [dragging, setDragging] = useState(false)
 
@@ -36,8 +36,11 @@ function VideoUploadZone({ file, progress, onFile }) {
               </div>
               <span className="text-xs text-zinc-500 shrink-0">{progress}%</span>
             </div>
-            {progress === 100 && (
+            {progress === 100 && !error && (
               <p className="text-xs text-emerald-400 mt-1 flex items-center gap-1"><RiCheckLine /> Upload complete</p>
+            )}
+            {error && (
+              <p className="text-xs text-red-400 mt-1 flex items-center gap-1">Upload failed — {error}</p>
             )}
           </div>
         </div>
@@ -120,6 +123,7 @@ export default function Upload() {
   async function handleSubmit() {
     if (!videoFile) { setError("Please select a video file."); return }
     if (!title.trim()) { setError("Please enter a title."); return }
+    if (!description.trim()) { setError("Please enter a description — it is required."); return }
     if (!thumbnailFile) { setError("Please add a thumbnail — it is required."); return }
     setError("")
     setLoading(true)
@@ -146,13 +150,15 @@ export default function Upload() {
 
       setVideoProgress(100)
       setSuccess(true)
-      setTimeout(() => navigate("/studio"), 1500)
+      // leave the green "Uploaded ✓" visible long enough to register before redirecting
+      setTimeout(() => navigate("/studio"), 2500)
     } catch (err) {
       setError(err.response?.data?.message || "Upload failed. Please try again.")
     } finally {
       setLoading(false)
     }
-  }  const isReady = videoFile && title.trim() && thumbnailFile
+  }
+  const isReady = videoFile && title.trim() && description.trim() && thumbnailFile
 
   if (!user) {
     return (
@@ -206,7 +212,7 @@ export default function Upload() {
 
                 <div className="bg-zinc-900 border border-white/[0.06] rounded-2xl p-6 flex flex-col gap-4">
                   <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-widest">Video file</h2>
-                  <VideoUploadZone file={videoFile} progress={videoProgress} onFile={handleVideoFile} />
+                  <VideoUploadZone file={videoFile} progress={videoProgress} onFile={handleVideoFile} error={error} />
                 </div>
 
                 <div className="bg-zinc-900 border border-white/[0.06] rounded-2xl p-6 flex flex-col gap-5">
@@ -223,7 +229,7 @@ export default function Upload() {
 
                   <div className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium text-zinc-300">Description</label>
+                      <label className="text-sm font-medium text-zinc-300">Description <span className="text-amber-400">*</span></label>
                       <span className="text-xs text-zinc-600">{description.length}/5000</span>
                     </div>
                     <textarea value={description} onChange={(e) => setDescription(e.target.value.slice(0, 5000))} placeholder="Tell viewers about your video..." rows={5}
@@ -269,9 +275,9 @@ export default function Upload() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <button onClick={handleSubmit} disabled={!isReady || loading}
-                    className="w-full py-3 rounded-xl text-sm font-semibold transition-all bg-amber-500 hover:bg-amber-400 text-zinc-950 disabled:opacity-40 disabled:cursor-not-allowed">
-                    {loading ? "Uploading..." : isPublished ? "Publish video" : "Save & make private"}
+                  <button onClick={handleSubmit} disabled={!isReady || loading || success}
+                    className={`w-full py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${success ? "bg-emerald-500 hover:bg-emerald-400 text-zinc-950" : "bg-amber-500 hover:bg-amber-400 text-zinc-950"}`}>
+                    {loading ? "Uploading..." : success ? "Uploaded ✓" : isPublished ? "Publish video" : "Save & make private"}
                   </button>
                 </div>
               </div>

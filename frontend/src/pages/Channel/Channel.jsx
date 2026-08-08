@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import VideoCard from "../../components/cards/VideoCard"
+import PostCard from "../../components/posts/PostCard"
 import { useAuth } from "../../context/AuthContext"
 import api from "../../services/api"
 import { RiBellLine, RiBellFill } from "react-icons/ri"
@@ -24,6 +25,7 @@ export default function Channel() {
   const { user }                          = useAuth()
   const [channel, setChannel]             = useState(null)
   const [videos, setVideos]               = useState([])
+  const [tweets, setTweets]               = useState([])
   const [subscribed, setSubscribed]       = useState(false)
   const [notified, setNotified]           = useState(false)
   const [joined, setJoined]               = useState(false)
@@ -47,6 +49,9 @@ export default function Channel() {
           params: { page: 1, limit: 12, userId: data._id }
         })
         if (!cancelled) setVideos(videosRes.data.data.docs || [])
+
+        const tweetsRes = await api.get(`/tweets/user/${data._id}`)
+        if (!cancelled) setTweets(tweetsRes.data.data || [])
       } catch {
         if (!cancelled) setChannel(null)
       } finally {
@@ -67,6 +72,13 @@ export default function Channel() {
     } catch {
       // keep current state on failure
     }
+  }
+
+  async function handleDeleteTweet(tweetId) {
+    try {
+      await api.delete(`/tweets/${tweetId}`)
+      setTweets(prev => prev.filter(t => t._id !== tweetId))
+    } catch { /* keep the post visible if the delete fails */ }
   }
 
   if (loading) {
@@ -149,7 +161,19 @@ export default function Channel() {
               </div>
             )}
             {activeTab === "Playlists" && <div className="flex items-center justify-center py-24 text-zinc-600 text-sm">No playlists yet.</div>}
-            {activeTab === "Community" && <div className="flex items-center justify-center py-24 text-zinc-600 text-sm">No community posts yet.</div>}
+            {activeTab === "Community" && (
+              <div className="flex flex-col gap-4 pb-8 max-w-2xl">
+                {tweets.map(post => (
+                  <PostCard
+                    key={post._id}
+                    post={post}
+                    canDelete={channel._id === user?._id}
+                    onDelete={handleDeleteTweet}
+                  />
+                ))}
+                {tweets.length === 0 && <p className="text-zinc-600 text-sm py-16 text-center">No community posts yet.</p>}
+              </div>
+            )}
             {activeTab === "About" && (
               <div className="max-w-2xl py-6 pb-8">
                 <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">Bio</h3>

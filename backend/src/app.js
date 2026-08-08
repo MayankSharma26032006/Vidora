@@ -1,6 +1,8 @@
 import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
+import helmet from 'helmet'
+import rateLimit from 'express-rate-limit'
 
 // routers
 import userRouter from './routes/user.routes.js'
@@ -15,11 +17,84 @@ import notificationRouter from './routes/notification.routes.js'
 
 const app = express()
 
-// middlewares
+// Automated tests fire hundreds of requests from one IP, so rate limiting is
+// skipped in the test environment (Vitest sets NODE_ENV=test automatically).
+const isTest = process.env.NODE_ENV === 'test'
+
+// Trust the first hop when deployed behind a reverse proxy (Render/Railway/
+// NGINX) so rate limiting sees the real client IP. Only enabled in production
+// to avoid trusting arbitrary proxies in local development.
+if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1)
+}
+
+// ---------- security headers ----------
+// crossOriginResourcePolicy must allow cross-origin access: the frontend loads
+// media from Cloudinary and opens a cross-origin EventSource (notifications).
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+}))
+
+// ---------- CORS ----------
+// Allow every origin listed in CORS_ORIGIN (comma-separated, e.g.
+// "http://localhost:5173,https://vidora.example.com").
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+
 app.use(cors({
-    origin: process.env.CORS_ORIGIN,
+    origin(origin, callback) {
+        // requests without an Origin header (curl, Postman, server-to-server)
+        // are not browser CORS requests and pass through
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true)
+        }
+        // disallowed origins get no CORS headers; the browser blocks them
+        return callback(null, false)
+    },
     credentials: true
 }))
+
+// ---------- rate limiting ----------
+const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000
+// generous general guard: a browsing session fires several requests per page
+// view, so keep this high enough to never bother real users (tune via env)
+const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX) || 600
+const AUTH_RATE_LIMIT_MAX = Number(process.env.AUTH_RATE_LIMIT_MAX) || 20
+
+const tooManyRequests = {
+    statusCode: 429,
+    message: 'Too many requests, please try again later.',
+    success: false
+}
+
+// strict limiter for credential endpoints (brute-force protection)
+const authLimiter = rateLimit({
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    max: AUTH_RATE_LIMIT_MAX,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: tooManyRequests
+})
+
+// general guard for the whole API
+const apiLimiter = rateLimit({
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    max: RATE_LIMIT_MAX,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: tooManyRequests
+})
+
+if (!isTest) {
+    app.use('/api/v1/user/login', authLimiter)
+    app.use('/api/v1/user/register', authLimiter)
+    app.use('/api/v1/user/refresh-token', authLimiter)
+    app.use('/api', apiLimiter)
+}
+
+// middlewares
 app.use(express.json({ limit: "16kb" }))
 app.use(express.urlencoded({ extended: true, limit: "16kb" }))
 // Express 5 leaves req.body undefined when nothing was parsed (e.g. a POST
@@ -55,5 +130,3 @@ app.use((err, req, res, next) => {
 })
 
 export default app
-
-

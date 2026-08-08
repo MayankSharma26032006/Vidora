@@ -163,7 +163,7 @@ const logOutUser = asyncHandler(async(req,res)=>{
       }
     },
     {
-      new :true
+      returnDocument: 'after'
     }
 
   )
@@ -254,7 +254,7 @@ const updateAccountDetails = asyncHandler(async(req,res)=>{
         email,
       }
     },
-    {new:true}
+    { returnDocument: 'after' }
   ).select("-password")
 
   if(!user){
@@ -285,7 +285,7 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
         avatar: avatar.url
       }
     },
-    {new:true}
+    { returnDocument: 'after' }
   ).select("-password")
 
   if(!user){
@@ -315,7 +315,7 @@ const updateCoverImage = asyncHandler(async(req,res)=>{
         coverImage:coverImage.url
       }
     },
-    {new:true}
+    { returnDocument: 'after' }
   ).select("-password")
 
   if(!user){

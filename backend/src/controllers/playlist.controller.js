@@ -196,7 +196,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     const updatedPlaylist = await Playlist.findByIdAndUpdate(
         playlistId,
         { $addToSet: { videos: videoId } },  // $addToSet avoids duplicates
-        { new: true }
+        { returnDocument: 'after' }
     )
 
     return res
@@ -227,7 +227,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     const updatedPlaylist = await Playlist.findByIdAndUpdate(
         playlistId,
         { $pull: { videos: new mongoose.Types.ObjectId(videoId) } },
-        { new: true }
+        { returnDocument: 'after' }
     )
 
     return res
@@ -288,7 +288,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     const updatedPlaylist = await Playlist.findByIdAndUpdate(
         playlistId,
         { $set: updateFields },
-        { new: true }
+        { returnDocument: 'after' }
     )
 
     return res
