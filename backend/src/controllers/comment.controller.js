@@ -87,6 +87,10 @@ const addComment = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Something went wrong while adding comment")
     }
 
+    // include the owner's profile in the response so the UI can render the
+    // avatar + username immediately (matches the list endpoint's shape)
+    await comment.populate({ path: "owner", select: "fullname username avatar" })
+
     // notify the video owner about the new comment
     const video = await Video.findById(videoId).select("owner")
     await createNotification({

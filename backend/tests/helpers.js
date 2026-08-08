@@ -1,10 +1,8 @@
 import request from "supertest"
-import path from "path"
-import { fileURLToPath } from "url"
 import app from "../src/app.js"
 
-// Multer writes uploads here before controllers validate them.
-export const TEMP_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public", "temp")
+// Multer writes uploads to the OS temp dir before controllers validate them.
+export { TEMP_DIR } from "../src/middlewares/multer.middleware.js"
 
 export function cookieFrom(res, name) {
   const header = res.headers["set-cookie"] || []

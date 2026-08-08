@@ -5,7 +5,7 @@ import api from "../../services/api"
 import Avatar from "../../components/ui/Avatar"
 import PostCard from "../../components/posts/PostCard"
 
-function CreatePost({ onPost }) {
+function CreatePost({ onPost, user }) {
   const [text, setText] = useState("")
 
   function handlePost() {
@@ -17,7 +17,7 @@ function CreatePost({ onPost }) {
   return (
     <div className="bg-zinc-900 border border-white/[0.06] rounded-2xl p-5 mb-6">
       <div className="flex gap-3">
-        <Avatar name="You" />
+        <Avatar src={user?.avatar} name={user?.fullname || "You"} />
         <div className="flex-1">
           <textarea
             value={text}
@@ -104,7 +104,7 @@ export default function Posts() {
             )}
 
             {user ? (
-              <CreatePost onPost={handlePost} />
+              <CreatePost onPost={handlePost} user={user} />
             ) : (
               <button
                 onClick={() => navigate("/login")}

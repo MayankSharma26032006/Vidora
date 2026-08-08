@@ -57,6 +57,10 @@ describe("POST /api/v1/comments/:videoId", () => {
     const { alice, bob, video } = await setup()
     const res = await addComment(bob.accessCookie, video._id, "Amazing!").expect(201)
     expect(res.body.data.content).toBe("Amazing!")
+    // the create response must include owner details so the UI can render
+    // the avatar + username immediately (no blank "?" avatar for new comments)
+    expect(res.body.data.owner.username).toBe("bob")
+    expect(res.body.data.owner.fullname).toBeTruthy()
 
     const notifs = await Notification.find({ owner: alice.user._id, type: "comment" })
     expect(notifs).toHaveLength(1)

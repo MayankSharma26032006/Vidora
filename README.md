@@ -250,7 +250,7 @@ cd backend
 npm install
 ```
 
-Create a `.env` file inside `backend/`:
+Create a `.env` file inside `backend/` (copy `backend/.env.example`):
 
 ```env
 PORT=8000
@@ -265,6 +265,11 @@ REFRESH_TOKEN_EXPIRY=10d
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
+
+# optional — rate limiting (defaults shown)
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=600
+AUTH_RATE_LIMIT_MAX=20
 ```
 
 Start the backend:
@@ -281,6 +286,13 @@ npm run dev
 ```
 The app will run at `http://localhost:5173`.
 
+The frontend talks to the backend at `http://localhost:8000` by default. To
+point it at a deployed backend, create `frontend/.env` (copy
+`frontend/.env.example`) with:
+
+```env
+VITE_API_URL=https://your-backend-url.example.com
+```
 ---
 
 ## 🗺️ Roadmap

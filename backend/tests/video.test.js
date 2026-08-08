@@ -6,8 +6,10 @@ import { connectTestDb, resetTestDb, disconnectTestDb } from "./bootstrap.js"
 // Mock Cloudinary so publishAVideo needs no network access or credentials.
 vi.mock("../src/utils/cloudinary.js", () => cloudinaryMockFactory())
 
+import fs from "fs"
+import path from "path"
 import app from "../src/app.js"
-import { registerAndLogin, createVideo } from "./helpers.js"
+import { registerAndLogin, createVideo, TEMP_DIR } from "./helpers.js"
 import { Video } from "../src/models/video.model.js"
 import { Like } from "../src/models/like.model.js"
 
@@ -42,6 +44,17 @@ describe("POST /api/v1/videos", () => {
     expect(res.body.message).toBe("Description is required")
   })
 
+  it("cleans up temp files when validation fails (no disk leak)", async () => {
+    const { accessCookie } = await registerAndLogin()
+    const before = fs.readdirSync(TEMP_DIR).length
+
+    // multer writes both files, then the controller rejects for a missing title
+    await createVideo(accessCookie, { title: "" }).expect(400)
+
+    const after = fs.readdirSync(TEMP_DIR).length
+    expect(after).toBe(before)
+  })
+
   it("rejects a missing video file with 400", async () => {
     const { accessCookie } = await registerAndLogin()
     const res = await request(app)
@@ -74,8 +87,9 @@ describe("POST /api/v1/videos", () => {
     expect(video.duration).toBe(42.5)
     expect(video.isPublished).toBe(true)
     expect(video.category).toBe("Music")
-    expect(video.videoFile).toContain("video.mp4")
-    expect(video.thumbnail).toContain("thumb.jpg")
+    // filenames are randomized for safety, but the extension must be preserved
+    expect(video.videoFile).toMatch(/\.mp4$/)
+    expect(video.thumbnail).toMatch(/\.jpg$/)
   })
 })
 

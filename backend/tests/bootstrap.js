@@ -1,7 +1,5 @@
 import { MongoMemoryServer } from "mongodb-memory-server"
 import mongoose from "mongoose"
-import fs from "fs"
-import { TEMP_DIR } from "./helpers.js"
 
 let mongod
 
@@ -15,10 +13,9 @@ export async function resetTestDb() {
 }
 
 export async function disconnectTestDb() {
-  // Multer writes uploads to public/temp before controllers validate, so
-  // error-path tests can leak files — wipe them and restore the dir.
-  fs.rmSync(TEMP_DIR, { recursive: true, force: true })
-  fs.mkdirSync(TEMP_DIR, { recursive: true })
+  // Temp files are cleaned up by uploadOnCloudinary and the global error
+  // handler (for validation failures), so no directory wipe is needed here.
+  // NOTE: never rmSync the OS temp dir — TEMP_DIR now points at os.tmpdir().
   await mongoose.disconnect()
   await mongod.stop()
 }

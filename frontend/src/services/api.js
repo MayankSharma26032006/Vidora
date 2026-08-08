@@ -3,6 +3,14 @@ import axios from "axios"
 // Overridable via frontend/.env (VITE_API_URL); defaults to local dev backend
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
 
+// Production builds must set VITE_API_URL — otherwise the app would call the
+// VISITOR'S localhost:8000 and appear completely broken with no obvious cause.
+if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
+  console.warn(
+    "[VidOra] VITE_API_URL is not set in this production build — the app will try to reach http://localhost:8000. Set it in frontend/.env (or your build env) and rebuild."
+  )
+}
+
 const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true,

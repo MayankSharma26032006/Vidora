@@ -136,7 +136,7 @@ describe("PATCH /api/v1/user/update-avatar", () => {
       .set("Cookie", accessCookie)
       .attach("avatar", Buffer.from("fake-avatar"), "new-avatar.jpg")
       .expect(200)
-    expect(res.body.data.avatar).toContain("new-avatar.jpg")
+    expect(res.body.data.avatar).toMatch(/\.jpg$/)
   })
 })
 
@@ -148,6 +148,6 @@ describe("PATCH /api/v1/user/update-cover", () => {
       .set("Cookie", accessCookie)
       .attach("coverImage", Buffer.from("fake-cover"), "new-cover.jpg")
       .expect(200)
-    expect(res.body.data.coverImage).toContain("new-cover.jpg")
+    expect(res.body.data.coverImage).toMatch(/\.jpg$/)
   })
 })

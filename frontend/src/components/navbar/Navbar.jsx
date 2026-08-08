@@ -3,49 +3,21 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../context/AuthContext"
 import api from "../../services/api"
 import Tooltip from "../ui/Tooltip"
+import SearchInput from "../search/SearchInput"
 import useNotificationStream from "../../hooks/useNotificationStream"
 import {
   RiSearchLine, RiVideoAddLine, RiBellLine,
-  RiArrowLeftLine, RiCloseLine, RiSettings3Line,
+  RiArrowLeftLine, RiSettings3Line,
   RiUser3Line, RiLogoutBoxLine, RiDashboardLine,
 } from "react-icons/ri"
 
 function SearchBar({ onClose }) {
-  const inputRef = useRef(null)
-  const navigate = useNavigate()
-  const [query, setQuery] = useState("")
-
-  useEffect(() => { inputRef.current?.focus() }, [])
-
-  function handleSearch(e) {
-    e.preventDefault()
-    if (!query.trim()) return
-    navigate(`/search?q=${encodeURIComponent(query.trim())}`)
-    onClose()
-  }
-
   return (
     <div className="flex items-center gap-3 flex-1 max-w-2xl mx-auto">
       <button onClick={onClose} aria-label="Close search" className="text-zinc-400 hover:text-white transition-colors shrink-0">
         <RiArrowLeftLine className="text-xl" />
       </button>
-      <form onSubmit={handleSearch} className="flex flex-1 items-center bg-white/[0.06] border border-white/[0.08] rounded-full px-4 py-2.5 gap-3 focus-within:border-amber-500/50 transition-colors">
-        <RiSearchLine className="text-zinc-500 text-[17px] shrink-0" />
-        <input
-          ref={inputRef}
-          type="search"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          aria-label="Search creators and videos"
-          placeholder="Search creators and videos..."
-          className="bg-transparent flex-1 text-sm text-white placeholder:text-zinc-500 outline-none"
-        />
-        {query && (
-          <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="text-zinc-500 hover:text-zinc-300 transition-colors">
-            <RiCloseLine className="text-[17px]" />
-          </button>
-        )}
-      </form>
+      <SearchInput />
     </div>
   )
 }

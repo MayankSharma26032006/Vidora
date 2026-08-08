@@ -3,6 +3,7 @@ import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
+import fs from 'fs'
 
 // routers
 import userRouter from './routes/user.routes.js'
@@ -104,7 +105,8 @@ app.use((req, res, next) => {
   if (!req.body) req.body = {}
   next()
 })
-app.use(express.static("public"))
+// NOTE: no express.static for "public" — multer's temp files live in the OS
+// temp dir now, so there is nothing static to serve from the backend.
 app.use(cookieParser())
 
 // routes
@@ -120,6 +122,24 @@ app.use("/api/v1/notifications", notificationRouter)
 
 // global error handler
 app.use((err, req, res, next) => {
+    // Multer already wrote files to the temp dir before the controller threw
+    // (e.g. validation failed). Remove them so failed uploads don't leak files
+    // and slowly fill the server disk. uploadOnCloudinary deletes its own files;
+    // this catches everything that never reached it.
+    const writtenFiles = []
+    if (req.file?.path) writtenFiles.push(req.file.path)
+    if (req.files) {
+        const lists = Array.isArray(req.files) ? req.files : Object.values(req.files)
+        for (const list of lists) {
+            for (const f of list || []) {
+                if (f?.path) writtenFiles.push(f.path)
+            }
+        }
+    }
+    for (const filePath of writtenFiles) {
+        try { fs.unlinkSync(filePath) } catch { /* already gone */ }
+    }
+
     const statusCode = err.statusCode || 500
     const message = err.message || "Internal Server Error"
     return res.status(statusCode).json({
