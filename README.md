@@ -260,7 +260,7 @@ CORS_ORIGIN=http://localhost:5173
 ACCESS_TOKEN_SECRET=your_access_token_secret
 ACCESS_TOKEN_EXPIRY=1d
 REFRESH_TOKEN_SECRET=your_refresh_token_secret
-REFRESH_TOKEN_EXPIRY=10d
+REFRESH_TOKEN_EXPIRY=30d
 
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
@@ -270,6 +270,20 @@ CLOUDINARY_API_SECRET=your_api_secret
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX=600
 AUTH_RATE_LIMIT_MAX=20
+
+# ---------- Email (only needed to actually deliver mail) ----------
+# Base URL of the deployed frontend — used to build verification / password
+# reset links inside the emails. MUST be your real frontend URL in production.
+FRONTEND_URL=http://localhost:5173
+
+# Leave SMTP_* empty to log emails to the console instead (dev only).
+# Set them on Render so verify / reset emails are actually delivered.
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_SECURE=false
+SMTP_FROM=
 ```
 
 Start the backend:
@@ -297,11 +311,13 @@ VITE_API_URL=https://your-backend-url.example.com
 
 ## 🗺️ Roadmap
 
-- [ ] Notifications system (real-time)
+- [x] Notifications system (real-time, SSE)
+- [x] Community posts (tweets)
+- [x] Email verification & password reset
+- [x] Unit & integration test coverage (backend + frontend, CI)
+- [ ] Deployment (frontend + backend hosted with live demo link)
 - [ ] Video quality/resolution selection
 - [ ] Full-text search improvements
-- [ ] Deployment (frontend + backend hosted with live demo link)
-- [ ] Unit & integration test coverage
 
 ---
 

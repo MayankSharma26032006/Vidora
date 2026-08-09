@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Environment files (VITE_API_URL lives here in production builds)
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
