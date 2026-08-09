@@ -16,8 +16,8 @@ const getVideoComments = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid video ID")
     }
 
-    // Comment threads of private videos must not leak to people who can't watch
-    // the video. Only the video owner (or anyone, when published) may read them.
+    
+    
     const video = await Video.findById(videoId).select("owner isPublished")
     if (!video) {
         throw new ApiError(404, "Video not found")
@@ -54,7 +54,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
                 owner: { $first: "$owner" }
             }
         },
-        // sorting for newest comments
+        
         {
             $sort: { createdAt: -1 }
         }
@@ -90,8 +90,8 @@ const addComment = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Comment content is required")
     }
 
-    // reject comments on videos that don't exist (or are private to someone
-    // else) so the DB never accumulates orphaned comments
+    
+    
     const video = await Video.findById(videoId).select("owner isPublished")
     if (!video) {
         throw new ApiError(404, "Video not found")
@@ -110,11 +110,11 @@ const addComment = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Something went wrong while adding comment")
     }
 
-    // include the owner's profile in the response so the UI can render the
-    // avatar + username immediately (matches the list endpoint's shape)
+    
+    
     await comment.populate({ path: "owner", select: "fullname username avatar" })
 
-    // notify the video owner about the new comment
+    
     await createNotification({
         owner: video?.owner,
         actor: req.user._id,
@@ -146,7 +146,7 @@ const updateComment = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Comment not found")
     }
 
-    // only the owner can update
+    
     if (comment.owner.toString() !== req.user._id.toString()) {
         throw new ApiError(403, "You are not allowed to update this comment")
     }
@@ -176,17 +176,17 @@ const deleteComment = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Comment not found")
     }
 
-    // only the owner can delete
+    
     if (comment.owner.toString() !== req.user._id.toString()) {
         throw new ApiError(403, "You are not allowed to delete this comment")
     }
 
     const deletedComment = await Comment.findByIdAndDelete(commentId)
 
-    // likes on the comment would otherwise orphan
+    
     await Like.deleteMany({ comment: commentId })
 
-    // undo the notification when a comment is removed
+    
     if (deletedComment) {
       const video = await Video.findById(deletedComment.video).select("owner")
       await removeNotification({

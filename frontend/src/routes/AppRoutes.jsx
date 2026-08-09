@@ -37,7 +37,7 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        {/* App pages share the sidebar + navbar shell */}
+        {}
         <Route element={<MainLayout />}>
           <Route path="/"                  element={<Home />} />
           <Route path="/watch/:videoId"    element={<Watch />} />
@@ -57,7 +57,7 @@ export default function AppRoutes() {
           <Route path="/community"         element={<Posts />} />
         </Route>
 
-        {/* Standalone pages (no sidebar/navbar) */}
+        {}
         <Route path="/login"    element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />

@@ -26,8 +26,8 @@ export default function Login() {
 
     try {
       await login(email, password)
-      // Unverified users are let in too — the app shell shows a dismissible
-      // "verify your email" banner instead of blocking the account.
+      
+      
       navigate("/")
     } catch (err) {
       setError(err.response?.data?.message || "Invalid email or password.")

@@ -19,7 +19,7 @@ const userSchema = new Schema({
         trim:true,
         
     },
-    // Display name — deliberately NOT lowercased so "John Doe" stays "John Doe"
+    
     fullname:{
         type:String,
         required:true,
@@ -27,12 +27,12 @@ const userSchema = new Schema({
         index:true,
     },
     avatar:{
-        type:String,//cloudinary url
+        type:String,
         required:true,
 
     },
-    // Cloudinary public ids so replaced avatars/covers can be deleted (avoids
-    // orphaned assets piling up on Cloudinary with every profile edit)
+    
+    
     avatarPublicId:{
         type:String,
         default:"",
@@ -107,8 +107,8 @@ userSchema.methods.generateAccessToken = function () {
         },
         process.env.ACCESS_TOKEN_SECRET,
         {
-            // Access tokens must stay short-lived even if the env var is
-            // missing — never inherit the (30d) refresh expiry for them.
+            
+            
             expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "1d",
         }
     )

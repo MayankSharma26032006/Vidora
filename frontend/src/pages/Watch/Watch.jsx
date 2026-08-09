@@ -41,7 +41,7 @@ export default function Watch() {
   const [subscribed, setSubscribed]       = useState(false)
   const [saved, setSaved]                 = useState(false)
   const [moreOpen, setMoreOpen]           = useState(false)
-  const [moreView, setMoreView]           = useState("main") // "main" | "playlists"
+  const [moreView, setMoreView]           = useState("main") 
   const moreRef                           = useRef(null)
   const [loading, setLoading]             = useState(true)
   const [error, setError]                 = useState("")
@@ -57,7 +57,7 @@ export default function Watch() {
         if (cancelled) return
         setVideo(res.data.data)
         setLiked(!!res.data.data.isLiked)
-        // likesCount already includes the current user's own like
+        
         setLikesCount(res.data.data.likesCount || 0)
         setSubscribed(!!res.data.data.isSubscribed)
         setSaved(!!res.data.data.isSaved)
@@ -90,7 +90,7 @@ export default function Watch() {
       setLiked(p => !p)
       setLikesCount(c => c + (liked ? -1 : 1))
     } catch {
-      // keep current state on failure
+      
     }
   }
 
@@ -100,7 +100,7 @@ export default function Watch() {
       await api.post(`/subscriptions/c/${video?.owner?._id}`)
       setSubscribed(p => !p)
     } catch {
-      // keep current state on failure
+      
     }
   }
 
@@ -110,7 +110,7 @@ export default function Watch() {
       await api.post(`/user/saved-videos/${videoId}`)
       setSaved(p => !p)
     } catch {
-      // keep current state on failure
+      
     }
   }
 
@@ -124,7 +124,7 @@ export default function Watch() {
     setMoreOpen(p => !p)
   }
 
-  // close the menu (and reset its sub-view) when clicking anywhere outside
+  
   useEffect(() => {
     function handleClickOutside(e) {
       if (moreRef.current && !moreRef.current.contains(e.target)) {

@@ -74,7 +74,7 @@ export default function Posts() {
       setPosts(prev => [
         {
           ...created,
-          // include _id so canDelete works immediately (the create response only has a raw owner id)
+          
           owner: { _id: user?._id, fullname: user?.fullname, username: user?.username, avatar: user?.avatar },
         },
         ...prev,
@@ -88,7 +88,7 @@ export default function Posts() {
     try {
       await api.delete(`/tweets/${tweetId}`)
       setPosts(prev => prev.filter(p => p._id !== tweetId))
-    } catch { /* delete failures surface on the next feed refresh */ }
+    } catch {  }
   }
 
   return (

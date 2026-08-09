@@ -160,7 +160,7 @@ const deleteTweet = asyncHandler(async (req, res) => {
 
     await Tweet.findByIdAndDelete(tweetId)
 
-    // likes on the deleted tweet would otherwise orphan
+    
     await Like.deleteMany({ tweet: tweetId })
 
     return res

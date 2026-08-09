@@ -1,7 +1,7 @@
 import request from "supertest"
 import app from "../src/app.js"
 
-// Multer writes uploads to the OS temp dir before controllers validate them.
+
 export { TEMP_DIR } from "../src/middlewares/multer.middleware.js"
 
 export function cookieFrom(res, name) {
@@ -10,7 +10,7 @@ export function cookieFrom(res, name) {
   return row ? row.split(";")[0] : null
 }
 
-// Returns the supertest chain (NOT a promise) so callers can use .expect()
+
 export function register(overrides = {}) {
   const body = {
     fullName: "Test User",
@@ -28,13 +28,13 @@ export function register(overrides = {}) {
     .attach("avatar", Buffer.from("fake-avatar-bytes"), "avatar.jpg")
 }
 
-// Counter so registerAndLogin() is safe to call multiple times within one test
-// — every user gets unique credentials instead of colliding with a 409.
+
+
 let userCounter = 0
 
-// NOTE: helpers imports app at module scope. Upload-dependent suites (register
-// avatar, publish video) MUST vi.mock("../src/utils/cloudinary.js") in their
-// test file, otherwise real Cloudinary config/network is used.
+
+
+
 export async function registerAndLogin(overrides = {}) {
   userCounter += 1
   const email = overrides.email ?? `user${userCounter}@example.com`
@@ -54,7 +54,7 @@ export async function registerAndLogin(overrides = {}) {
   }
 }
 
-// Returns the supertest chain for creating a video as an authenticated user.
+
 export function createVideo(accessCookie, video = {}) {
   return request(app)
     .post("/api/v1/videos")

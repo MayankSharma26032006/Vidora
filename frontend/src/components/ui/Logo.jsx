@@ -1,5 +1,5 @@
-// VidOra brand mark — the "Peak-V": a white mountain/V with an amber sun dot.
-// Transparent background so it sits on any dark surface (sidebar, navbar, auth pages).
+
+
 export default function Logo({ size = 20, className = "" }) {
   return (
     <svg

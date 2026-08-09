@@ -9,18 +9,18 @@ import mongoose, { isValidObjectId } from "mongoose";
 import crypto from "crypto";
 import { sendMail } from "../utils/mailer.js";
 
-// Simple, strict-but-pragmatic email check: something@something.tld.
-// Enforced on register / login / account update so junk strings can't be
-// stored or used as a login identifier.
+
+
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isValidEmail = (email) => EMAIL_RE.test((email || "").trim());
 
-// Usernames are public handles used in URLs and channel names — restrict to
-// letters/digits/underscore so they can't contain spaces or symbols.
+
+
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 
-// Minimum password length. Kept at 8 to reject the weakest passwords while
-// still being friendly to hobby users.
+
+
 const MIN_PASSWORD_LENGTH = 8;
 
 const cookieOptions = {
@@ -29,15 +29,15 @@ const cookieOptions = {
   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
 };
 
-// Token TTLs: verification links are valid 24h, password reset links 1h.
+
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 const getFrontendUrl = () => process.env.FRONTEND_URL || "http://localhost:5173";
 
-// Generates a fresh verification token, persists it, and emails the link.
-// Called from register and resend — never throws; the caller decides whether a
-// failed mail should fail the whole request.
+
+
+
 const sendVerificationEmail = async (user) => {
   const token = crypto.randomBytes(32).toString("hex");
   user.emailVerificationToken = token;
@@ -81,8 +81,8 @@ const generateAccessAndRefreshTokens = async (userId) => {
 
 
 const registerUser = asyncHandler(async (req, res) => {
-  // get user details, validate, check existing, upload avatar,
-  // create user, return without password/refresh token
+  
+  
 
   const { fullName, email, username, password } = req.body;
   if (!fullName?.trim()) {
@@ -133,7 +133,7 @@ const registerUser = asyncHandler(async (req, res) => {
   const coverImage = await uploadOnCloudinary(coverImageLocalPath, "vidora/covers")
 
   if(!avatar){
-    // if the cover made it to Cloudinary but the avatar didn't, clean it up
+    
     if (coverImage?.public_id) await deleteFromCloudinary(coverImage.public_id, "image")
     throw new ApiError(400,"Avatar is required")
   }
@@ -150,11 +150,11 @@ const registerUser = asyncHandler(async (req, res) => {
       username: username.toLowerCase()
     })
   } catch (createError) {
-    // DB write failed — remove uploaded assets so they don't linger on Cloudinary
+    
     await deleteFromCloudinary(avatar.public_id, "image")
     if (coverImage?.public_id) await deleteFromCloudinary(coverImage.public_id, "image")
-    // duplicate email/username race (the pre-check above isn't atomic) —
-    // surface a clean 409 instead of a 500 with Mongo internals
+    
+    
     if (createError?.code === 11000) {
       throw new ApiError(409, "User already exists")
     }
@@ -169,9 +169,9 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(500,"Something went wrong while registering")
   }
 
-  // Fire-and-forget verification email. Registration must not fail if the
-  // mailer is down — the user can resend from the login page. The response
-  // carries isEmailVerified so the UI can prompt them to check their inbox.
+  
+  
+  
   sendVerificationEmail(createdUser).catch((mailError) => {
     console.error("Failed to send verification email:", mailError?.message);
   });
@@ -181,12 +181,12 @@ const registerUser = asyncHandler(async (req, res) => {
   )
 });
 const loginUser = asyncHandler(async (req, res) => {
-  // req body -> data
-  // username or email
-  // check if user exists
-  // password check
-  // refresh and access token
-  // send cookies
+  
+  
+  
+  
+  
+  
   const { email, username, password } = req.body;
   if (!(email || username)) {
     throw new ApiError(400, "username or email is required");
@@ -196,9 +196,9 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid email format");
   }
 
-  // The schema stores both lowercased/trimmed, but Mongo doesn't normalize
-  // query values — so "Test@Example.com" or " Mayank " would never match.
-  // Normalize here so login works regardless of how the user typed it.
+  
+  
+  
   const normalizedEmail = email?.trim().toLowerCase()
   const normalizedUsername = username?.trim().toLowerCase()
   const user = await User.findOne({
@@ -273,11 +273,11 @@ const refreshAccessToken = asyncHandler(async(req,res)=>{
     if(incomingRefreshToken !== user.refreshToken){
       throw new ApiError(401,"Refresh token is expired or used")
     }
-    // Issue a fresh access token WITHOUT rotating the refresh token. Rotating
-    // on every refresh breaks multi-tab sessions: two open tabs refreshing at
-    // the same moment invalidate each other's token and the user gets logged
-    // out after ~an hour of use. The refresh token is still revoked on logout
-    // / password change and expires after REFRESH_TOKEN_EXPIRY.
+    
+    
+    
+    
+    
     const accessToken = user.generateAccessToken()
     return res
     .status(200)
@@ -311,8 +311,8 @@ const changeCurrentPassword = asyncHandler(async(req,res)=>{
     throw new ApiError(400,"Invalid old password")
   }
   user.password = newPassword
-  // revoke all existing sessions: the stored refresh token no longer matches
-  // any refresh cookie, so old devices are logged out on their next refresh
+  
+  
   user.refreshToken = undefined
   await user.save({validateBeforeSave:false})
   return res
@@ -350,7 +350,7 @@ const updateAccountDetails = asyncHandler(async(req,res)=>{
       { returnDocument: 'after' }
     ).select("-password")
   } catch (updateError) {
-    // the email already belongs to someone else — unique index raised E11000
+    
     if (updateError?.code === 11000) {
       throw new ApiError(409, "Email is already in use")
     }
@@ -367,8 +367,8 @@ const updateAccountDetails = asyncHandler(async(req,res)=>{
 })
 
 const updateUserAvatar = asyncHandler(async(req,res)=>{
-  // upload.single("avatar") populates req.file; support both shapes so the
-  // endpoint works whether multer was configured with .single() or .fields()
+  
+  
   const avatarLocalPath = req.file?.path || req.files?.avatar?.[0]?.path
   if(!avatarLocalPath){
     throw new ApiError(400,"Avatar file is missing")
@@ -391,12 +391,12 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
   ).select("-password")
 
   if(!user){
-    // DB write failed — don't leave the new avatar orphaned on Cloudinary
+    
     await deleteFromCloudinary(avatar.public_id, "image")
     throw new ApiError(404, "User not found")
   }
 
-  // replaced the avatar — remove the old image from Cloudinary
+  
   if (oldAvatar?.avatarPublicId && oldAvatar.avatarPublicId !== avatar.public_id) {
     await deleteFromCloudinary(oldAvatar.avatarPublicId, "image")
   }
@@ -408,7 +408,7 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
   )
 })
 const updateCoverImage = asyncHandler(async(req,res)=>{
-  // upload.single("coverImage") populates req.file; support both shapes
+  
   const coverImageLocalPath = req.file?.path || req.files?.coverImage?.[0]?.path
   if(!coverImageLocalPath){
     throw new ApiError(400,"Cover image is missing")
@@ -430,12 +430,12 @@ const updateCoverImage = asyncHandler(async(req,res)=>{
   ).select("-password")
 
   if(!user){
-    // DB write failed — don't leave the new cover orphaned on Cloudinary
+    
     await deleteFromCloudinary(coverImage.public_id, "image")
     throw new ApiError(404, "User not found")
   }
 
-  // replaced the cover — remove the old image from Cloudinary
+  
   if (oldCover?.coverImagePublicId && oldCover.coverImagePublicId !== coverImage.public_id) {
     await deleteFromCloudinary(oldCover.coverImagePublicId, "image")
   }
@@ -536,8 +536,8 @@ const toggleSaveVideo = asyncHandler(async(req,res)=>{
   if(!video){
     throw new ApiError(404, "Video not found")
   }
-  // a private video can only be saved by its owner — otherwise anyone could
-  // save an unpublished video they can't watch
+  
+  
   if (!video.isPublished && video.owner.toString() !== req.user._id.toString()) {
     throw new ApiError(404, "Video not found")
   }
@@ -558,9 +558,9 @@ const toggleSaveVideo = asyncHandler(async(req,res)=>{
 })
 
 const getSavedVideos = asyncHandler(async(req,res)=>{
-  // A video a user saved may have gone private since. Keep it visible only if
-  // it's still published, or if the current user owns it (they can always see
-  // their own videos). Anything else is dropped so private content doesn't leak.
+  
+  
+  
   const viewerId = new mongoose.Types.ObjectId(req.user._id)
   const user = await User.aggregate([
     {
@@ -619,8 +619,8 @@ const getSavedVideos = asyncHandler(async(req,res)=>{
 })
 
 const getWatchHistory = asyncHandler(async(req,res)=>{
-  // Same privacy rule as saved videos: drop entries for videos that went
-  // private after the user watched them, unless the user owns the video.
+  
+  
   const viewerId = new mongoose.Types.ObjectId(req.user._id)
   const user = await User.aggregate([
     {
@@ -721,7 +721,7 @@ const forgotPassword = asyncHandler(async(req,res)=>{
   }
   const user = await User.findOne({ email: email.trim().toLowerCase() })
   if(!user){
-    // Don't leak whether the address is registered — same response either way.
+    
     return res
       .status(200)
       .json(new ApiResponse(200,{},"If that email is registered, a password reset link has been sent."))
@@ -760,8 +760,8 @@ const resetPassword = asyncHandler(async(req,res)=>{
   user.password = newPassword
   user.passwordResetToken = ""
   user.passwordResetTokenExpiry = null
-  // Revoke existing sessions: the stored refresh token no longer matches any
-  // cookie, so other devices are logged out on their next refresh.
+  
+  
   user.refreshToken = undefined
   await user.save({ validateBeforeSave: false })
   return res

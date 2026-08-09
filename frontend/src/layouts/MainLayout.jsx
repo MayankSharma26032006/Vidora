@@ -6,16 +6,16 @@ import { useAuth } from "../context/AuthContext"
 import api from "../services/api"
 import { RiMailSendLine, RiCloseLine } from "react-icons/ri"
 
-// Shared app shell — every logged-in page renders inside this.
-// Pages only provide their own content; Sidebar/Navbar/scroll live here.
+
+
 export default function MainLayout() {
   const { user } = useAuth()
   const [dismissed, setDismissed] = useState(false)
   const [resending, setResending] = useState(false)
   const [resent, setResent] = useState(false)
 
-  // Non-blocking nudge: unverified users can use the app freely, the banner
-  // just reminds them to confirm their email (dismissible per session).
+  
+  
   const showVerifyBanner = user && user.isEmailVerified === false && !dismissed
 
   async function handleResend() {
@@ -24,7 +24,7 @@ export default function MainLayout() {
       await api.post("/user/resend-verification")
       setResent(true)
     } catch {
-      // A failed resend shouldn't break the app — the banner just stays
+      
     } finally {
       setResending(false)
     }

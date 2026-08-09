@@ -11,10 +11,10 @@ export function AuthProvider({ children }) {
     getCurrentUser()
   }, [])
 
-  // The axios interceptor fires this when a refresh fails while the user had a
-  // real session (e.g. the refresh token itself expired after 30 days). Send
-  // them to the login screen with a clear message instead of silently dropping
-  // them at a blank login.
+  
+  
+  
+  
   useEffect(() => {
     function onSessionExpired() {
       setUser(null)
@@ -70,7 +70,7 @@ export function AuthProvider({ children }) {
   )
 }
 
-// Provider + hook share one file
+
 // eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext)

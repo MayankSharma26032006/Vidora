@@ -92,7 +92,7 @@ const markAllRead = asyncHandler(async (req, res) => {
         }
     )
 
-    // every open tab of this user clears its badge instantly
+    
     publishToUser(req.user._id, { type: "notifications-changed" })
 
     return res

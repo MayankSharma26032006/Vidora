@@ -20,7 +20,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Video not found")
     }
 
-    // a private video can't be liked by people who can't watch it
+    
     if (!video.isPublished && video.owner.toString() !== req.user._id.toString()) {
         throw new ApiError(404, "Video not found")
     }
@@ -31,9 +31,9 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     })
 
     if (existingLike) {
-        // if already liked unlike it
+        
         await Like.findByIdAndDelete(existingLike._id)
-        // undo the notification when a like is removed
+        
         await removeNotification({
             owner: video?.owner,
             actor: req.user._id,
@@ -51,7 +51,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         likedBy: req.user._id
     })
 
-    // notify the video owner about the new like
+    
     await createNotification({
         owner: video?.owner,
         actor: req.user._id,
@@ -126,8 +126,8 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 
 
 const getLikedVideos = asyncHandler(async (req, res) => {
-    // A video the user liked may have gone private since — drop it unless the
-    // user owns it (mirrors the saved-videos/history privacy rule).
+    
+    
     const viewerId = new mongoose.Types.ObjectId(req.user._id)
     const likedVideos = await Like.aggregate([
         {
@@ -151,7 +151,7 @@ const getLikedVideos = asyncHandler(async (req, res) => {
                             ]
                         }
                     },
-                    // get the owner of each video
+                    
                     {
                         $lookup: {
                             from: "users",

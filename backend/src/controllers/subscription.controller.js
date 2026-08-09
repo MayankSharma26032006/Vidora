@@ -15,12 +15,12 @@ const toggleSubscription = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid channel ID")
     }
 
-    // can't subscribe to yourself
+    
     if (channelId.toString() === req.user._id.toString()) {
         throw new ApiError(400, "You cannot subscribe to yourself")
     }
 
-    // reject subscriptions to channels that don't exist
+    
     const channelExists = await User.exists({ _id: channelId })
     if (!channelExists) {
         throw new ApiError(404, "Channel not found")
@@ -33,7 +33,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 
     if (existingSubscription) {
         await Subscription.findByIdAndDelete(existingSubscription._id)
-        // undo the notification when unsubscribed
+        
         await removeNotification({
             owner: channelId,
             actor: req.user._id,
@@ -49,7 +49,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
         channel: channelId
     })
 
-    // notify the channel about the new subscriber
+    
     await createNotification({
         owner: channelId,
         actor: req.user._id,
@@ -63,7 +63,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 
 
 const getSubscriptionsFeed = asyncHandler(async (req, res) => {
-    // Latest published videos from the channels the current user subscribed to.
+    
     const limitNum = parseInt(req.query.limit, 10)
     const limit = Number.isFinite(limitNum) && limitNum > 0 ? Math.min(limitNum, 50) : 12
 

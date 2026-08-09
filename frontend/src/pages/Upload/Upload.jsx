@@ -150,7 +150,7 @@ export default function Upload() {
 
       setVideoProgress(100)
       setSuccess(true)
-      // leave the green "Uploaded ✓" visible long enough to register before redirecting
+      
       setTimeout(() => navigate("/studio"), 2500)
     } catch (err) {
       setError(err.response?.data?.message || "Upload failed. Please try again.")

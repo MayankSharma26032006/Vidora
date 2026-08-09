@@ -10,12 +10,12 @@ import { asyncHandler } from "../utils/asyncHandler.js"
 const getChannelStats = asyncHandler(async (req, res) => {
     const userId = req.user._id
 
-    // total subscribers
+    
     const totalSubscribers = await Subscription.countDocuments({
         channel: userId
     })
 
-    // total videos, total views, total likes on all videos
+    
     const videoStats = await Video.aggregate([
         {
             $match: {
@@ -59,8 +59,8 @@ const getChannelVideos = asyncHandler(async (req, res) => {
     const pageNum = parseInt(page, 10)
     const limitNum = parseInt(limit, 10)
 
-    // NaN/negative/zero values would turn into a bad skip/limit and 500 —
-    // clamp to safe defaults instead.
+    
+    
     const safe = {
         page: Number.isFinite(pageNum) && pageNum > 0 ? pageNum : 1,
         limit: Number.isFinite(limitNum) && limitNum > 0 ? Math.min(limitNum, 50) : 12
@@ -103,9 +103,9 @@ const getChannelVideos = asyncHandler(async (req, res) => {
         }
     ]
 
-    // Count first, then run the paginated fetch — two cheap queries instead of
-    // one unbounded one, so a channel with thousands of videos doesn't dump
-    // them all into a single response.
+    
+    
+    
     const [totalResult, videos] = await Promise.all([
         Video.aggregate([...pipeline, { $count: "total" }]),
         Video.aggregate([

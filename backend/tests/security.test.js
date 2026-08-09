@@ -16,8 +16,8 @@ afterAll(async () => {
     await mongo.stop()
 })
 
-// mirror of the app's own default so the test passes even when CORS_ORIGIN
-// is set to a different value in the local environment
+
+
 const firstAllowedOrigin = (process.env.CORS_ORIGIN || 'http://localhost:5173')
     .split(',')[0]
     .trim()

@@ -37,8 +37,8 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid user ID")
     }
 
-    // Private videos must not be surfaced to other users through playlists —
-    // only the video owner can see them (and playlists are always authed).
+    
+    
     const viewerId = new mongoose.Types.ObjectId(req.user._id)
 
     const playlists = await Playlist.aggregate([
@@ -77,7 +77,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
             $addFields: {
                 totalVideos: { $size: "$videos" },
                 totalViews: { $sum: "$videos.views" },
-                // first video's thumbnail so playlist cards can render one
+                
                 thumbnail: { $arrayElemAt: ["$videos.thumbnail", 0] }
             }
         },
@@ -107,9 +107,9 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid playlist ID")
     }
 
-    // Drop private videos a viewer isn't allowed to see (they're always authed
-    // here). Without this, a playlist would hand out the private video's
-    // Cloudinary videoFile URL to any authenticated user.
+    
+    
+    
     const viewerId = new mongoose.Types.ObjectId(req.user._id)
 
     const playlist = await Playlist.aggregate([
@@ -222,8 +222,8 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(403, "You are not allowed to modify this playlist")
     }
 
-    // Don't $addToSet a bogus/deleted video id — the $lookups downstream would
-    // yield null videos and the UI renders ghost cards.
+    
+    
     const video = await Video.findById(videoId).select("_id isPublished owner")
     if (!video) {
         throw new ApiError(404, "Video not found")
@@ -234,7 +234,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 
     const updatedPlaylist = await Playlist.findByIdAndUpdate(
         playlistId,
-        { $addToSet: { videos: videoId } },  // $addToSet avoids duplicates
+        { $addToSet: { videos: videoId } },  
         { returnDocument: 'after' }
     )
 

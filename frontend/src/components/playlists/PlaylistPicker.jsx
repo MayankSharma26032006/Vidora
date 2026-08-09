@@ -6,11 +6,7 @@ import {
   RiArrowLeftLine, RiCheckLine, RiAddLine, RiPlayListLine,
 } from "react-icons/ri"
 
-/**
- * Dropdown that lets a signed-in user add/remove the current video from
- * their existing playlists, or quick-create a new playlist with it.
- * Existing playlists load automatically when the picker opens.
- */
+
 export default function PlaylistPicker({ videoId, onBack, onClose }) {
   const navigate    = useNavigate()
   const { user }    = useAuth()
@@ -21,7 +17,7 @@ export default function PlaylistPicker({ videoId, onBack, onClose }) {
   const [pendingId, setPendingId]       = useState(null)
   const [error, setError]               = useState("")
 
-  // Auto-load the user's playlists the moment the picker opens.
+  
   useEffect(() => {
     if (!user?._id) return undefined
     let cancelled = false

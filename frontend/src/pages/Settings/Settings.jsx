@@ -73,15 +73,15 @@ function ProfileTab({ user }) {
   const [email, setEmail]          = useState(user?.email || "")
   const [preview, setPreview]      = useState(user?.avatar || null)
   const [avatarUploading, setAvatarUploading] = useState(false)
-  const [avatarStatus, setAvatarStatus]       = useState("") // "ok" | "error" | ""
+  const [avatarStatus, setAvatarStatus]       = useState("") 
   const [avatarMsg, setAvatarMsg] = useState("")
   const [loading, setLoading]     = useState(false)
   const [error, setError]         = useState("")
   const [deleteOpen, setDeleteOpen] = useState(false)
   const avatarRef                 = useRef(null)
 
-  // Picking a photo uploads it immediately (no hidden save step), then
-  // refreshes the auth context so the new avatar shows everywhere at once.
+  
+  
   async function handleAvatarChange(e) {
     const file = e.target.files[0]
     if (!file) return
@@ -99,7 +99,7 @@ function ProfileTab({ user }) {
       setAvatarMsg("Profile photo updated")
       await getCurrentUser()
     } catch (err) {
-      // don't show a photo that was never saved — revert to the persisted avatar
+      
       URL.revokeObjectURL(blobUrl)
       setPreview(user?.avatar || null)
       setAvatarStatus("error")
@@ -114,7 +114,7 @@ function ProfileTab({ user }) {
     setLoading(true)
     try {
       await api.patch("/user/update-account", { fullName: fullname, email })
-      await getCurrentUser() // keep the navbar/profile menu in sync
+      await getCurrentUser() 
     } catch (err) {
       setError(err.response?.data?.message || "Failed to save changes.")
     } finally {

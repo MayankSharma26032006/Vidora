@@ -105,7 +105,7 @@ function PlaylistModal({ playlist, onClose, onChanged }) {
       setVideos(vs => vs.filter(v => v._id !== videoId))
       onChanged?.()
     } catch {
-      // keep current state on failure
+      
     } finally {
       setRemovingId(null)
     }
@@ -118,7 +118,7 @@ function PlaylistModal({ playlist, onClose, onChanged }) {
       onChanged?.()
       onClose()
     } catch {
-      // stay open on failure
+      
     } finally {
       setDeleting(false)
       setDeleteOpen(false)

@@ -35,7 +35,7 @@ describe("VideoCard", () => {
     expect(screen.getByText("My test video")).toBeInTheDocument()
     expect(screen.getByText("@testcreator")).toBeInTheDocument()
     expect(screen.getByText(/1.5K views/)).toBeInTheDocument()
-    // duration floors the seconds — no more "0:46.613"
+    
     expect(screen.getByText("0:46")).toBeInTheDocument()
   })
 

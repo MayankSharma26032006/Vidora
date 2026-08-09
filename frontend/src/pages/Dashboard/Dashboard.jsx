@@ -93,14 +93,14 @@ export default function Dashboard() {
     try {
       await api.delete(`/videos/${videoId}`)
       setVideos(prev => prev.filter(v => v._id !== videoId))
-    } catch { /* refresh or dismiss surfaces the error */ }
+    } catch {  }
   }
 
   async function handleToggle(videoId) {
     try {
       await api.patch(`/videos/${videoId}`)
       setVideos(prev => prev.map(v => v._id === videoId ? { ...v, isPublished: !v.isPublished } : v))
-    } catch { /* refresh or dismiss surfaces the error */ }
+    } catch {  }
   }
 
   const statCards = [

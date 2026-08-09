@@ -10,7 +10,7 @@ import { verifyJWT } from "../middlewares/auth.middleware.js"
 
 const router = Router()
 
-// Reads are public (community feed); writes require auth
+
 router.route("/").get(getAllTweets).post(verifyJWT, createTweet)
 router.route("/user/:userId").get(getUserTweets)
 router.route("/:tweetId").patch(verifyJWT, updateTweet).delete(verifyJWT, deleteTweet)

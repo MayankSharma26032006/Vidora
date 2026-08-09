@@ -1,19 +1,7 @@
 import fs from "fs"
 
-/**
- * Factory for mocking "../src/utils/cloudinary.js". Every upload-dependent test
- * file must call it through the lazy wrapper to dodge Vitest's hoisting:
- *
- *   vi.mock("../src/utils/cloudinary.js", () => cloudinaryMockFactory())
- *
- * (Passing the function reference directly fails with
- * "Cannot access '__vi_import_1__' before initialization".)
- *
- * Mirrors the real util's behavior: returns null for missing paths, unlinks the
- * local multer temp file, and provides a duration so publishAVideo can store it.
- */
+
 import { vi } from "vitest"
-import fs from "fs"
 
 export function cloudinaryMockFactory() {
   return {
@@ -22,7 +10,7 @@ export function cloudinaryMockFactory() {
       try {
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
       } catch {
-        /* best-effort cleanup */
+        
       }
       const name = filePath.split(/[\\/]/).pop()
       return {

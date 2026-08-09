@@ -32,7 +32,7 @@ describe("GET /api/v1/comments/:videoId", () => {
   it("is public and returns comments newest first with owner", async () => {
     const { bob, video } = await setup()
     const first = (await addComment(bob.accessCookie, video._id, "First").expect(201)).body.data
-    // Backdate so ordering can't flake on same-millisecond creates
+    
     await Comment.findByIdAndUpdate(first._id, { $set: { createdAt: new Date("2026-01-01") } })
     await addComment(bob.accessCookie, video._id, "Second").expect(201)
 
@@ -57,8 +57,8 @@ describe("POST /api/v1/comments/:videoId", () => {
     const { alice, bob, video } = await setup()
     const res = await addComment(bob.accessCookie, video._id, "Amazing!").expect(201)
     expect(res.body.data.content).toBe("Amazing!")
-    // the create response must include owner details so the UI can render
-    // the avatar + username immediately (no blank "?" avatar for new comments)
+    
+    
     expect(res.body.data.owner.username).toBe("bob")
     expect(res.body.data.owner.fullname).toBeTruthy()
 

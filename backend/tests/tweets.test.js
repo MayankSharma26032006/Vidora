@@ -52,7 +52,7 @@ describe("GET /api/v1/tweets", () => {
     const first = (
       await request(app).post("/api/v1/tweets").set("Cookie", alice.accessCookie).send({ content: "Older" }).expect(201)
     ).body.data
-    // Backdate so ordering can't flake on same-millisecond creates
+    
     await Tweet.findByIdAndUpdate(first._id, { $set: { createdAt: new Date("2026-01-01") } })
     await request(app).post("/api/v1/tweets").set("Cookie", bob.accessCookie).send({ content: "Newer" }).expect(201)
 

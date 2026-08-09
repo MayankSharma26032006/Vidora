@@ -3,10 +3,10 @@ import { useEffect, useRef } from "react"
 export default function VideoPlayer({ video }) {
   const videoRef = useRef(null)
 
-  // Best-effort autoplay when the page loads: clicking a video should start
-  // playback immediately. Browsers may block playback with sound until the user
-  // has interacted with the page — in that case the built-in controls let them
-  // start manually, so the failure is swallowed silently.
+  
+  
+  
+  
   useEffect(() => {
     const el = videoRef.current
     if (!el) return

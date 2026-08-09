@@ -3,7 +3,7 @@ import request from "supertest"
 import { cloudinaryMockFactory } from "./mocks.js"
 import { connectTestDb, resetTestDb, disconnectTestDb } from "./bootstrap.js"
 
-// Mock Cloudinary so publishAVideo needs no network access or credentials.
+
 vi.mock("../src/utils/cloudinary.js", () => cloudinaryMockFactory())
 
 import fs from "fs"
@@ -24,9 +24,9 @@ async function userAndVideo(userOverrides = {}, videoOverrides = {}) {
   return { session, video: res.body.data }
 }
 
-// ---------------------------------------------------------------------------
-// publish
-// ---------------------------------------------------------------------------
+
+
+
 
 describe("POST /api/v1/videos", () => {
   it("requires authentication", async () => {
@@ -49,7 +49,7 @@ describe("POST /api/v1/videos", () => {
     const { accessCookie } = await registerAndLogin()
     const before = fs.readdirSync(TEMP_DIR).length
 
-    // multer writes both files, then the controller rejects for a missing title
+    
     await createVideo(accessCookie, { title: "" }).expect(400)
 
     const after = fs.readdirSync(TEMP_DIR).length
@@ -60,7 +60,7 @@ describe("POST /api/v1/videos", () => {
     const { uploadOnCloudinary, deleteFromCloudinary } = await import("../src/utils/cloudinary.js")
     const { accessCookie } = await registerAndLogin()
 
-    // First call (videoFile) succeeds, second call (thumbnail) fails
+    
     uploadOnCloudinary
       .mockClear()
       .mockImplementationOnce(async () => ({ url: "https://cdn.test/v.mp4", public_id: "video-orphan", duration: 42.5 }))
@@ -69,7 +69,7 @@ describe("POST /api/v1/videos", () => {
     const res = await createVideo(accessCookie).expect(500)
     expect(res.body.message).toBe("Failed to upload thumbnail to Cloudinary")
 
-    // the already-uploaded video file must be removed from Cloudinary
+    
     expect(deleteFromCloudinary).toHaveBeenCalledWith("video-orphan", "video")
   })
 
@@ -77,7 +77,7 @@ describe("POST /api/v1/videos", () => {
     const { uploadOnCloudinary, deleteFromCloudinary } = await import("../src/utils/cloudinary.js")
     const { accessCookie } = await registerAndLogin()
 
-    // both uploads succeed, but Video.create fails (duration missing)
+    
     uploadOnCloudinary
       .mockClear()
       .mockImplementationOnce(async () => ({ url: "https://cdn.test/v.mp4", public_id: "video-orphan2", duration: undefined }))
@@ -121,7 +121,7 @@ describe("POST /api/v1/videos", () => {
     expect(video.duration).toBe(42.5)
     expect(video.isPublished).toBe(true)
     expect(video.category).toBe("Music")
-    // filenames are randomized for safety, but the extension must be preserved
+    
     expect(video.videoFile).toMatch(/\.mp4$/)
     expect(video.thumbnail).toMatch(/\.jpg$/)
   })
@@ -136,9 +136,9 @@ describe("POST /api/v1/videos", () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// list / search
-// ---------------------------------------------------------------------------
+
+
+
 
 describe("GET /api/v1/videos", () => {
   it("returns published videos with an embedded owner", async () => {
@@ -183,12 +183,12 @@ describe("GET /api/v1/videos", () => {
       .attach("thumbnail", Buffer.from("fake-thumb-bytes"), "thumb.jpg")
       .expect(201)
 
-    // owner can view their own private video
+    
     await request(app)
       .get(`/api/v1/videos/${res.body.data._id}`)
       .set("Cookie", owner.accessCookie)
       .expect(200)
-    // anyone else gets 404 — no leaked private content
+    
     await request(app)
       .get(`/api/v1/videos/${res.body.data._id}`)
       .set("Cookie", stranger.accessCookie)
@@ -245,9 +245,9 @@ describe("GET /api/v1/videos", () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// get by id
-// ---------------------------------------------------------------------------
+
+
+
 
 describe("GET /api/v1/videos/:videoId", () => {
   it("returns the video and increments views on each fetch", async () => {
@@ -287,9 +287,9 @@ describe("GET /api/v1/videos/:videoId", () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// update
-// ---------------------------------------------------------------------------
+
+
+
 
 describe("PATCH /api/v1/videos/update/:videoId", () => {
   it("forbids non-owners with 403", async () => {
@@ -336,9 +336,9 @@ describe("PATCH /api/v1/videos/update/:videoId", () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// publish toggle
-// ---------------------------------------------------------------------------
+
+
+
 
 describe("PATCH /api/v1/videos/:videoId (publish toggle)", () => {
   it("lets the owner unpublish and hides the video from listings", async () => {
@@ -363,9 +363,9 @@ describe("PATCH /api/v1/videos/:videoId (publish toggle)", () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// delete
-// ---------------------------------------------------------------------------
+
+
+
 
 describe("DELETE /api/v1/videos/:videoId", () => {
   it("forbids non-owners with 403", async () => {
@@ -392,7 +392,7 @@ describe("DELETE /api/v1/videos/:videoId", () => {
 
     await request(app).get(`/api/v1/videos/${video._id}`).expect(404)
 
-    // The deleted video no longer lingers in the user's saved list.
+    
     const saved = await request(app)
       .get("/api/v1/user/saved-videos")
       .set("Cookie", session.accessCookie)

@@ -2,13 +2,13 @@ import mongoose, { Schema } from "mongoose"
 
 const notificationSchema = new Schema(
   {
-    // The user who receives the notification
+    
     owner: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    // The user who triggered the event (liked, commented, subscribed)
+    
     actor: {
       type: Schema.Types.ObjectId,
       ref: "User",
@@ -19,7 +19,7 @@ const notificationSchema = new Schema(
       enum: ["subscribe", "like", "comment"],
       required: true,
     },
-    // Related video (for like/comment notifications)
+    
     video: {
       type: Schema.Types.ObjectId,
       ref: "Video",

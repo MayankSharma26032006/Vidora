@@ -17,5 +17,9 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // best-effort error handling uses empty catch blocks on purpose
+      'no-empty': ['error', { allowEmptyCatch: true }],
+    },
   },
 ])

@@ -81,13 +81,13 @@ export default function Navbar() {
   const [profileMenuOpen, setProfileMenuOpen]     = useState(false)
   const [unreadCount, setUnreadCount]             = useState(0)
 
-  // Width of the mirrored side columns (left spacer + right actions row).
-  // Must fit the widest content: the Sign in button (~169px) when logged out,
-  // or just the avatar (~124px) when logged in. If it's too narrow, flexbox
-  // squashes the button and "Sign in" wraps into a weird circle.
+  
+  
+  
+  
   const sideWidth = user ? "sm:w-[150px]" : "sm:w-[176px]"
 
-  // Poll the unread notification count every 60s while logged in
+  
   useEffect(() => {
     let cancelled = false
 
@@ -100,7 +100,7 @@ export default function Navbar() {
         const res = await api.get("/notifications/unread-count")
         if (!cancelled) setUnreadCount(res.data.data?.count || 0)
       } catch {
-        // keep last known count on failure
+        
       }
     }
 
@@ -109,12 +109,12 @@ export default function Navbar() {
     return () => { cancelled = true; clearInterval(interval) }
   }, [user?._id])
 
-  // Real-time: the server pushes an event the instant notifications change,
-  // so the badge updates across windows without waiting for the poll.
+  
+  
   useNotificationStream(!!user?._id, () => {
     api.get("/notifications/unread-count")
       .then(res => setUnreadCount(res.data.data?.count || 0))
-      .catch(() => { /* keep last known count */ })
+      .catch(() => {  })
   })
 
   const initials = user?.fullname
@@ -129,8 +129,7 @@ export default function Navbar() {
         <SearchBar onClose={() => setSearchOpen(false)} />
       ) : (
         <>
-          {/* Invisible spacer mirroring the actions column so the search box
-              is dead-centered in the header, not just left of the buttons. */}
+          {}
           <div aria-hidden="true" className={`hidden sm:block ${sideWidth} shrink-0`} />
 
           <div className="flex items-center gap-3 flex-1 max-w-2xl mx-auto min-w-[44px]">

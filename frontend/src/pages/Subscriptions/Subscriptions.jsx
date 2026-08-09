@@ -14,7 +14,7 @@ function CreatorCard({ creator }) {
     try {
       await api.post(`/subscriptions/c/${creator._id}`)
       setSubscribed(false)
-    } catch { /* stay subscribed; error surfaces on next visit */ }
+    } catch {  }
   }
 
   return (
@@ -60,7 +60,7 @@ export default function Subscriptions() {
         const channels = (res.data.data || []).map(s => s.channel || s).filter(Boolean)
         if (!cancelled) setCreators(channels)
 
-        // videos from the channels the user actually subscribed to
+        
         const videosRes = await api.get("/subscriptions/feed", { params: { limit: 6 } })
         if (!cancelled) setLatestVideos(videosRes.data.data || [])
       } catch {

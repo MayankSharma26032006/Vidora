@@ -13,10 +13,10 @@ export default function Search() {
   const [query, setQuery]                 = useState(urlQuery)
   const [sortBy, setSortBy]               = useState("Relevance")
 
-  // Reset the search when the URL changes while mounted (e.g. picking a
-  // suggestion from the navbar search box while already on /search). React's
-  // render-time state adjustment — only fires when the URL actually changed,
-  // so it never clobbers what the user is currently typing.
+  
+  
+  
+  
   const [prevUrlQuery, setPrevUrlQuery]   = useState(urlQuery)
   if (urlQuery !== prevUrlQuery) {
     setPrevUrlQuery(urlQuery)
@@ -25,7 +25,7 @@ export default function Search() {
   const [videos, setVideos]               = useState([])
   const [loading, setLoading]             = useState(false)
 
-  // Live search as you type (debounced), still syncs the URL on submit
+  
   const debouncedQuery = useDebounce(query, 350)
 
   useEffect(() => {

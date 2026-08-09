@@ -43,14 +43,14 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading]        = useState(true)
   const [error, setError]            = useState(null)
-  // bumped by the real-time stream so the list refreshes the moment
-  // a notification is created/removed/marked-read in any tab
+  
+  
   const [refreshKey, setRefreshKey]  = useState(0)
 
-  // tracks whether a list was ever loaded successfully — so a background
-  // refresh failure keeps the existing list instead of showing the error screen
+  
+  
   const hasLoadedRef = useRef(false)
-  // prevents overlapping requests when a slow poll outlives the 60s interval
+  
   const inFlightRef = useRef(false)
 
   useEffect(() => {
@@ -81,22 +81,22 @@ export default function Notifications() {
     }
 
     fetchNotifications()
-    // auto-refresh: poll every 60s and refetch when the tab regains focus
+    
     const interval = setInterval(fetchNotifications, 60_000)
     const handleFocus = () => fetchNotifications()
     window.addEventListener("focus", handleFocus)
 
     return () => {
       cancelled = true
-      // release the in-flight lock so a real-time event that re-runs this
-      // effect is not swallowed by a still-pending background poll
+      
+      
       inFlightRef.current = false
       clearInterval(interval)
       window.removeEventListener("focus", handleFocus)
     }
   }, [user?._id, refreshKey])
 
-  // Real-time: refetch immediately when the backend pushes an event.
+  
   useNotificationStream(!!user?._id, () => setRefreshKey(k => k + 1))
 
   async function handleMarkAllRead() {
@@ -104,7 +104,7 @@ export default function Notifications() {
       await api.patch("/notifications/read-all")
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
     } catch {
-      // keep current state on failure
+      
     }
   }
 

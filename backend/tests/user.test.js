@@ -24,7 +24,7 @@ describe("GET /api/v1/user/channel-profile/:username", () => {
     expect(res.body.data.videoCount).toBe(1)
     expect(res.body.data.subscribersCount).toBe(1)
     expect(res.body.data.channelsSubscribedToCount).toBe(0)
-    expect(res.body.data.isSubscribed).toBe(false) // anonymous requester
+    expect(res.body.data.isSubscribed).toBe(false) 
   })
 
   it("marks isSubscribed for a subscribed requester", async () => {
@@ -60,13 +60,13 @@ describe("GET /api/v1/user/watch-history", () => {
     const bob = await registerAndLogin({ username: "bob3", email: "bob3@example.com" })
     const video = (await createVideo(bob.accessCookie).expect(201)).body.data
 
-    // watching as alice records into her history
+    
     await request(app).get(`/api/v1/videos/${video._id}`).set("Cookie", alice.accessCookie).expect(200)
 
     const res = await request(app).get("/api/v1/user/watch-history").set("Cookie", alice.accessCookie).expect(200)
     expect(res.body.data).toHaveLength(1)
     expect(res.body.data[0]._id.toString()).toBe(video._id.toString())
-    // owner fullname comes through (regression: projection used fullName, not fullname)
+    
     expect(res.body.data[0].owner.fullname).toBe("Test User")
   })
 })
@@ -105,7 +105,7 @@ describe("PATCH /api/v1/user/update-account", () => {
       .set("Cookie", accessCookie)
       .send({ fullName: "New Name", email: "newname@example.com" })
       .expect(200)
-    expect(res.body.data.fullname).toBe("New Name") // display name keeps its case
+    expect(res.body.data.fullname).toBe("New Name") 
     expect(res.body.data.email).toBe("newname@example.com")
   })
 

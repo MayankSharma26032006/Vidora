@@ -35,10 +35,10 @@ describe("GET /api/v1/dashboard/stats", () => {
     const v1 = (await createVideo(alice.accessCookie, { title: "Video 1" }).expect(201)).body.data
     await createVideo(alice.accessCookie, { title: "Video 2" }).expect(201)
 
-    // bob subscribes to alice and likes video 1
+    
     await request(app).post(`/api/v1/subscriptions/c/${alice.user._id}`).set("Cookie", bob.accessCookie).expect(200)
     await request(app).post(`/api/v1/likes/toggle/v/${v1._id}`).set("Cookie", bob.accessCookie).expect(200)
-    // one view on video 1
+    
     await request(app).get(`/api/v1/videos/${v1._id}`).expect(200)
 
     const res = await request(app).get("/api/v1/dashboard/stats").set("Cookie", alice.accessCookie).expect(200)

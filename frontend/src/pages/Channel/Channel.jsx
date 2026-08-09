@@ -66,7 +66,7 @@ export default function Channel() {
       await api.post(`/subscriptions/c/${channel?._id}`)
       setSubscribed(p => !p)
     } catch {
-      // keep current state on failure
+      
     }
   }
 
@@ -74,7 +74,7 @@ export default function Channel() {
     try {
       await api.delete(`/tweets/${tweetId}`)
       setTweets(prev => prev.filter(t => t._id !== tweetId))
-    } catch { /* keep the post visible if the delete fails */ }
+    } catch {  }
   }
 
   if (loading) {

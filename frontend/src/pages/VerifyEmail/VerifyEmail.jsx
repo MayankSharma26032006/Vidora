@@ -8,7 +8,7 @@ export default function VerifyEmail() {
   const [searchParams] = useSearchParams()
   const token          = searchParams.get("token") || ""
   const hasToken       = Boolean(token)
-  const [status, setStatus] = useState(hasToken ? "verifying" : "error") // verifying | verified | error
+  const [status, setStatus] = useState(hasToken ? "verifying" : "error") 
   const [error, setError]   = useState(hasToken ? "" : "No verification link found. Check your email for the full link.")
   const [loading, setLoading] = useState(hasToken)
 

@@ -20,9 +20,9 @@ function saveRecent(term) {
   localStorage.setItem(RECENT_KEY, JSON.stringify(next))
 }
 
-// Search box with a YouTube-style suggestions dropdown:
-// - recent searches (localStorage) when focused/empty
-// - live autocomplete of matching video titles + channel names while typing
+
+
+
 export default function SearchInput() {
   const navigate                    = useNavigate()
   const inputRef                    = useRef(null)
@@ -36,7 +36,7 @@ export default function SearchInput() {
 
   useEffect(() => { inputRef.current?.focus() }, [])
 
-  // Live autocomplete — top matching video titles + channel names
+  
   useEffect(() => {
     const q = debouncedQuery.trim()
     if (!q) return
@@ -77,13 +77,13 @@ export default function SearchInput() {
     const t = term.trim()
     if (!t) return
     saveRecent(t)
-    setQuery(t)          // fill the search bar with the selected term (YouTube-style)
+    setQuery(t)          
     setOpen(false)
     setActive(-1)
     navigate(`/search?q=${encodeURIComponent(t)}`)
-    // Deliberately keep the search bar open with the term visible, like
-    // YouTube — the user dismisses it with the back arrow. (Closing it here
-    // made the suggestion feel like a dead "showpiece": the term vanished.)
+    
+    
+    
   }
 
   function handleKeyDown(e) {
@@ -141,9 +141,9 @@ export default function SearchInput() {
               key={`${item.type}-${item.term}`}
               role="option"
               aria-selected={i === active}
-              // Keep focus on the input when clicking an option, otherwise the
-              // input's onBlur closes the dropdown mid-click and slow clicks
-              // are silently dropped (the button unmounts before mouseup).
+              
+              
+              
               onMouseDown={(e) => e.preventDefault()}
               onMouseEnter={() => setActive(i)}
               onClick={() => runSearch(item.term)}

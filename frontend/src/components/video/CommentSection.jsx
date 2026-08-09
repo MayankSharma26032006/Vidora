@@ -30,8 +30,8 @@ function CommentItem({ comment, onReply }) {
   )
 }
 
-// Self-contained comment thread for a video: fetches, posts, and supports
-// @-reply prefills. Needs `videoId` and the current `user` (guest-safe).
+
+
 export default function CommentSection({ videoId, user }) {
   const navigate                      = useNavigate()
   const [comments, setComments]       = useState([])
@@ -64,7 +64,7 @@ export default function CommentSection({ videoId, user }) {
       setComments(prev => [res.data.data, ...prev])
       setCommentText("")
     } catch {
-      // keep current state on failure
+      
     }
   }
 

@@ -46,7 +46,7 @@ describe("SearchInput", () => {
 
     await waitFor(() => expect(screen.getByText("motivation video")).toBeInTheDocument(), { timeout: 2000 })
     expect(screen.getByText("Video")).toBeInTheDocument()
-    // channel names matching the query are listed too
+    
     expect(screen.getByText("motivator")).toBeInTheDocument()
     expect(screen.getByText("Channel")).toBeInTheDocument()
   })
@@ -63,7 +63,7 @@ describe("SearchInput", () => {
     await waitFor(() => expect(screen.getByText("motivation video")).toBeInTheDocument(), { timeout: 2000 })
     fireEvent.click(screen.getByText("motivation video"))
 
-    // the clicked term is added to the search bar, like YouTube
+    
     expect(input).toHaveValue("motivation video")
     expect(screen.getByTestId("loc").textContent).toBe("/search?q=motivation%20video")
   })

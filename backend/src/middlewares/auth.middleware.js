@@ -23,8 +23,8 @@ export const verifyJWT = asyncHandler(async(req, _,next)=>{
     }  
 })
 
-// Like verifyJWT but never rejects — attaches req.user when a valid token
-// is present, otherwise lets the request continue as a guest.
+
+
 export const optionalAuth = asyncHandler(async (req, _, next) => {
     try {
         const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")

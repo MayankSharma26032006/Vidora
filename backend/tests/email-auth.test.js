@@ -6,7 +6,7 @@ import { User } from "../src/models/user.model.js"
 
 vi.mock("../src/utils/cloudinary.js", () => cloudinaryMockFactory())
 
-// Without SMTP env vars the mailer just logs to the console — flows still work.
+
 import app from "../src/app.js"
 import { register, registerAndLogin } from "./helpers.js"
 
@@ -14,9 +14,9 @@ beforeAll(connectTestDb)
 beforeEach(resetTestDb)
 afterAll(disconnectTestDb)
 
-// ---------------------------------------------------------------------------
-// verify-email
-// ---------------------------------------------------------------------------
+
+
+
 
 describe("POST /api/v1/user/verify-email", () => {
   it("verifies the email with a valid token", async () => {
@@ -69,9 +69,9 @@ describe("POST /api/v1/user/verify-email", () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// resend-verification
-// ---------------------------------------------------------------------------
+
+
+
 
 describe("POST /api/v1/user/resend-verification", () => {
   it("sends a fresh verification token for an unverified user", async () => {
@@ -109,9 +109,9 @@ describe("POST /api/v1/user/resend-verification", () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// forgot-password
-// ---------------------------------------------------------------------------
+
+
+
 
 describe("POST /api/v1/user/forgot-password", () => {
   it("creates a reset token for a registered email", async () => {
@@ -148,9 +148,9 @@ describe("POST /api/v1/user/forgot-password", () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// reset-password
-// ---------------------------------------------------------------------------
+
+
+
 
 describe("POST /api/v1/user/reset-password", () => {
   it("resets the password and revokes the old session", async () => {
@@ -158,7 +158,7 @@ describe("POST /api/v1/user/reset-password", () => {
     const dbUser = await User.findById(user._id)
     const token = dbUser.passwordResetToken
 
-    // Create a reset token the way forgot-password would.
+    
     const resetRes = await request(app)
       .post("/api/v1/user/forgot-password")
       .send({ email: dbUser.email })
@@ -172,25 +172,25 @@ describe("POST /api/v1/user/reset-password", () => {
       .expect(200)
     expect(reset.body.success).toBe(true)
 
-    // Old refresh token is gone — the previous session can't be resumed.
+    
     const refreshed = await User.findById(user._id)
     expect(refreshed.refreshToken).toBeUndefined()
     expect(refreshed.passwordResetToken).toBe("")
 
-    // Old access token no longer authenticates (password change cleared it).
+    
     const current = await request(app)
       .get("/api/v1/user/current-user")
       .set("Cookie", accessCookie)
     expect([200, 401]).toContain(current.status)
 
-    // New password works.
+    
     const login = await request(app)
       .post("/api/v1/user/login")
       .send({ email: dbUser.email, password: "newpassword123" })
       .expect(200)
     expect(login.body.success).toBe(true)
 
-    // Old password no longer works.
+    
     await request(app)
       .post("/api/v1/user/login")
       .send({ email: dbUser.email, password: "password123" })
