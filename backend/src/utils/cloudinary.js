@@ -22,7 +22,7 @@ const uploadOnCloudinary = async (localFilePath, folder = "") => {
             folder,
         })
         fs.unlinkSync(localFilePath) 
-        return response
+        return { ...response, url: response.secure_url || response.url }
     } catch (error) {
         
         
