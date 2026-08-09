@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { loginUser, logOutUser, registerUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updateUserAvatar, updateCoverImage, getUserChannelProfile, getWatchHistory, toggleSaveVideo, getSavedVideos } from "../controllers/user.controller.js";
+import { loginUser, logOutUser, registerUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updateUserAvatar, updateCoverImage, getUserChannelProfile, getWatchHistory, toggleSaveVideo, getSavedVideos, verifyEmail, resendVerification, forgotPassword, resetPassword } from "../controllers/user.controller.js";
 import { verifyJWT, optionalAuth } from "../middlewares/auth.middleware.js";
 import {upload} from "../middlewares/multer.middleware.js";
 const router = Router();
@@ -31,4 +31,8 @@ router.route("/channel-profile/:username").get(optionalAuth, getUserChannelProfi
 router.route("/watch-history").get(verifyJWT, getWatchHistory)
 router.route("/saved-videos/:videoId").post(verifyJWT, toggleSaveVideo)
 router.route("/saved-videos").get(verifyJWT, getSavedVideos)
+router.route("/verify-email").post(verifyEmail)
+router.route("/resend-verification").post(verifyJWT, resendVerification)
+router.route("/forgot-password").post(forgotPassword)
+router.route("/reset-password").post(resetPassword)
 export default router;

@@ -19,10 +19,10 @@ const userSchema = new Schema({
         trim:true,
         
     },
+    // Display name — deliberately NOT lowercased so "John Doe" stays "John Doe"
     fullname:{
         type:String,
         required:true,
-        lowercase:true,
         trim:true,
         index:true,
     },
@@ -31,8 +31,18 @@ const userSchema = new Schema({
         required:true,
 
     },
+    // Cloudinary public ids so replaced avatars/covers can be deleted (avoids
+    // orphaned assets piling up on Cloudinary with every profile edit)
+    avatarPublicId:{
+        type:String,
+        default:"",
+    },
     coverImage:{
         type:String,
+    },
+    coverImagePublicId:{
+        type:String,
+        default:"",
     },
     watchHistory:[
         {
@@ -56,6 +66,26 @@ const userSchema = new Schema({
     refreshToken:{
         type:String,
     },
+    isEmailVerified:{
+        type:Boolean,
+        default:false,
+    },
+    emailVerificationToken:{
+        type:String,
+        default:"",
+    },
+    emailVerificationTokenExpiry:{
+        type:Date,
+        default:null,
+    },
+    passwordResetToken:{
+        type:String,
+        default:"",
+    },
+    passwordResetTokenExpiry:{
+        type:Date,
+        default:null,
+    },
 },{timestamps:true})
 userSchema.pre("save", async function () {
     if (!this.isModified("password")) return;
@@ -77,7 +107,9 @@ userSchema.methods.generateAccessToken = function () {
         },
         process.env.ACCESS_TOKEN_SECRET,
         {
-            expiresIn: process.env.ACCESS_TOKEN_EXPIRY || process.env.REFRESH_TOKEN_EXPIRY || "15m",
+            // Access tokens must stay short-lived even if the env var is
+            // missing — never inherit the (30d) refresh expiry for them.
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "1d",
         }
     )
 }

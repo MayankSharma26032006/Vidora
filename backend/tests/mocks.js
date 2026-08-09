@@ -12,9 +12,12 @@ import fs from "fs"
  * Mirrors the real util's behavior: returns null for missing paths, unlinks the
  * local multer temp file, and provides a duration so publishAVideo can store it.
  */
+import { vi } from "vitest"
+import fs from "fs"
+
 export function cloudinaryMockFactory() {
   return {
-    uploadOnCloudinary: async (filePath) => {
+    uploadOnCloudinary: vi.fn(async (filePath) => {
       if (!filePath) return null
       try {
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
@@ -27,7 +30,7 @@ export function cloudinaryMockFactory() {
         public_id: `test_${name}`,
         duration: 42.5,
       }
-    },
-    deleteFromCloudinary: async () => ({ result: "ok" }),
+    }),
+    deleteFromCloudinary: vi.fn(async () => ({ result: "ok" })),
   }
 }

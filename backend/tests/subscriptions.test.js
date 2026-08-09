@@ -18,6 +18,14 @@ describe("POST /api/v1/subscriptions/c/:channelId", () => {
     await request(app).post("/api/v1/subscriptions/c/64f0abc1234567890def0001").expect(401)
   })
 
+  it("rejects subscribing to a nonexistent channel with 404", async () => {
+    const fan = await registerAndLogin({ username: "ghostfan", email: "ghostfan@example.com" })
+    await request(app)
+      .post("/api/v1/subscriptions/c/64f0abc1234567890def0001")
+      .set("Cookie", fan.accessCookie)
+      .expect(404)
+  })
+
   it("subscribes to a channel and notifies it", async () => {
     const channel = await registerAndLogin({ username: "channel", email: "channel@example.com" })
     const fan = await registerAndLogin({ username: "fan", email: "fan@example.com" })

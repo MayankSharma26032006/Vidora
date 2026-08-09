@@ -2,13 +2,16 @@ import { Router } from "express"
 import {
     toggleSubscription,
     getSubscriberList,
-    getSubscribedChannels
+    getSubscribedChannels,
+    getSubscriptionsFeed
 } from "../controllers/subscription.controller.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js"
 
 const router = Router()
 
 router.use(verifyJWT)
+
+router.route("/feed").get(getSubscriptionsFeed)
 
 router.route("/c/:channelId")
     .post(toggleSubscription)

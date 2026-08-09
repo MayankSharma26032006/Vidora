@@ -29,9 +29,16 @@ export default function Register() {
     if (file) { setAvatar(file); setPreview(URL.createObjectURL(file)) }
   }
 
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  const usernameValid = /^[a-zA-Z0-9_]{3,20}$/.test(username)
+
   async function handleSubmit(e) {
     e.preventDefault()
     if (!fullname || !username || !email || !password || !confirm) { setError("Please fill in all fields."); return }
+    if (!avatar) { setError("A profile picture is required."); return }
+    if (!emailValid) { setError("Please enter a valid email address."); return }
+    if (!usernameValid) { setError("Username must be 3-20 characters (letters, numbers, underscores)."); return }
+    if (password.length < 8) { setError("Password must be at least 8 characters."); return }
     if (mismatch) { setError("Passwords do not match."); return }
     setError("")
     setLoading(true)
@@ -139,7 +146,7 @@ export default function Register() {
                   <button type="button" onClick={() => inputRef.current?.click()} className="text-sm text-amber-400 hover:text-amber-300 transition-colors">
                     {preview ? "Change photo" : "Upload photo"}
                   </button>
-                  <p className="text-xs text-zinc-600 mt-0.5">Optional · JPG or PNG</p>
+                  <p className="text-xs text-zinc-600 mt-0.5">Required · JPG or PNG</p>
                 </div>
                 {preview && (
                   <button type="button" onClick={() => { setPreview(null); setAvatar(null) }} className="ml-auto text-zinc-600 hover:text-zinc-300 transition-colors">
@@ -173,6 +180,7 @@ export default function Register() {
                   className="w-full pl-8 pr-4 py-3 rounded-xl border border-white/[0.08] bg-zinc-900 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-amber-500/40 transition-colors"
                 />
               </div>
+              <p className="text-xs text-zinc-600 mt-0.5">3-20 characters · letters, numbers, underscores</p>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -202,6 +210,7 @@ export default function Register() {
                   {showPass ? <RiEyeOffLine /> : <RiEyeLine />}
                 </button>
               </div>
+              <p className="text-xs text-zinc-600 mt-0.5">At least 8 characters</p>
             </div>
 
             <div className="flex flex-col gap-1.5">

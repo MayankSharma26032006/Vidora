@@ -18,6 +18,9 @@ const Subscriptions = lazy(() => import("../pages/Subscriptions/Subscriptions"))
 const Settings      = lazy(() => import("../pages/Settings/Settings"))
 const Login         = lazy(() => import("../pages/Login/Login"))
 const Register      = lazy(() => import("../pages/Register/Register"))
+const ForgotPassword = lazy(() => import("../pages/ForgotPassword/ForgotPassword"))
+const ResetPassword  = lazy(() => import("../pages/ResetPassword/ResetPassword"))
+const VerifyEmail    = lazy(() => import("../pages/VerifyEmail/VerifyEmail"))
 const NotFound      = lazy(() => import("../pages/NotFound/NotFound"))
 const Notifications = lazy(() => import("../pages/Notifications/Notifications"))
 const Posts         = lazy(() => import("../pages/Posts/Posts"))
@@ -57,6 +60,9 @@ export default function AppRoutes() {
         {/* Standalone pages (no sidebar/navbar) */}
         <Route path="/login"    element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="*"         element={<NotFound />} />
       </Routes>
     </Suspense>

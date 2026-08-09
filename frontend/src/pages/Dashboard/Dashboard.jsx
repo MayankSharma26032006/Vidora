@@ -77,7 +77,7 @@ export default function Dashboard() {
           api.get("/dashboard/videos"),
         ])
         if (!cancelled) setStats(statsRes.data.data)
-        if (!cancelled) setVideos(videosRes.data.data || [])
+        if (!cancelled) setVideos(videosRes.data.data?.videos || [])
       } catch {
         if (!cancelled) setStats(null)
       } finally {
@@ -104,7 +104,7 @@ export default function Dashboard() {
   }
 
   const statCards = [
-    { icon: RiUserFollowLine, label: "Subscribers", value: stats?.subscribersCount || 0,  change: 7.2, color: "bg-amber-500/15 text-amber-400"    },
+    { icon: RiUserFollowLine, label: "Subscribers", value: stats?.totalSubscribers || 0,  change: 7.2, color: "bg-amber-500/15 text-amber-400"    },
     { icon: RiEyeLine,        label: "Total views", value: stats?.totalViews || 0,         change: 9.0, color: "bg-blue-500/15 text-blue-400"      },
     { icon: RiVideoLine,      label: "Videos",      value: stats?.totalVideos || 0,        change: 8.1, color: "bg-purple-500/15 text-purple-400"  },
     { icon: RiThumbUpLine,    label: "Total likes", value: stats?.totalLikes || 0,         change: 3.3, color: "bg-emerald-500/15 text-emerald-400" },

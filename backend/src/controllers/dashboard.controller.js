@@ -55,8 +55,18 @@ const getChannelStats = asyncHandler(async (req, res) => {
 
 const getChannelVideos = asyncHandler(async (req, res) => {
     const userId = req.user._id
+    const { page = 1, limit = 12 } = req.query
+    const pageNum = parseInt(page, 10)
+    const limitNum = parseInt(limit, 10)
 
-    const videos = await Video.aggregate([
+    // NaN/negative/zero values would turn into a bad skip/limit and 500 —
+    // clamp to safe defaults instead.
+    const safe = {
+        page: Number.isFinite(pageNum) && pageNum > 0 ? pageNum : 1,
+        limit: Number.isFinite(limitNum) && limitNum > 0 ? Math.min(limitNum, 50) : 12
+    }
+
+    const pipeline = [
         {
             $match: {
                 owner: new mongoose.Types.ObjectId(userId)
@@ -91,11 +101,33 @@ const getChannelVideos = asyncHandler(async (req, res) => {
         {
             $sort: { createdAt: -1 }
         }
+    ]
+
+    // Count first, then run the paginated fetch — two cheap queries instead of
+    // one unbounded one, so a channel with thousands of videos doesn't dump
+    // them all into a single response.
+    const [totalResult, videos] = await Promise.all([
+        Video.aggregate([...pipeline, { $count: "total" }]),
+        Video.aggregate([
+            ...pipeline,
+            { $skip: (safe.page - 1) * safe.limit },
+            { $limit: safe.limit }
+        ])
     ])
+
+    const totalVideos = totalResult[0]?.total || 0
+    const totalPages = Math.max(1, Math.ceil(totalVideos / safe.limit))
 
     return res
         .status(200)
-        .json(new ApiResponse(200, videos, "Channel videos fetched successfully"))
+        .json(new ApiResponse(200, {
+            videos,
+            page: safe.page,
+            limit: safe.limit,
+            totalVideos,
+            totalPages,
+            hasNextPage: safe.page < totalPages
+        }, "Channel videos fetched successfully"))
 })
 
 

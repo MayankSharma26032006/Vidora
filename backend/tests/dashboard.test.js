@@ -64,9 +64,31 @@ describe("GET /api/v1/dashboard/videos", () => {
     await request(app).post(`/api/v1/likes/toggle/v/${aliceVideo._id}`).set("Cookie", bob.accessCookie).expect(200)
 
     const res = await request(app).get("/api/v1/dashboard/videos").set("Cookie", alice.accessCookie).expect(200)
-    expect(res.body.data).toHaveLength(2)
-    expect(res.body.data.every((v) => v.title.startsWith("Alice's"))).toBe(true)
-    const liked = res.body.data.find((v) => v._id.toString() === aliceVideo._id.toString())
+    expect(res.body.data.videos).toHaveLength(2)
+    expect(res.body.data.totalVideos).toBe(2)
+    expect(res.body.data.page).toBe(1)
+    expect(res.body.data.totalPages).toBe(1)
+    expect(res.body.data.hasNextPage).toBe(false)
+    expect(res.body.data.videos.every((v) => v.title.startsWith("Alice's"))).toBe(true)
+    const liked = res.body.data.videos.find((v) => v._id.toString() === aliceVideo._id.toString())
     expect(liked.totalLikes).toBe(1)
+  })
+
+  it("paginates results", async () => {
+    const alice = await registerAndLogin({ username: "alice3", email: "alice3@example.com" })
+    for (let i = 0; i < 5; i++) {
+      await createVideo(alice.accessCookie, { title: `Video ${i}` }).expect(201)
+    }
+
+    const res = await request(app)
+      .get("/api/v1/dashboard/videos?page=2&limit=2")
+      .set("Cookie", alice.accessCookie)
+      .expect(200)
+
+    expect(res.body.data.videos).toHaveLength(2)
+    expect(res.body.data.totalVideos).toBe(5)
+    expect(res.body.data.page).toBe(2)
+    expect(res.body.data.totalPages).toBe(3)
+    expect(res.body.data.hasNextPage).toBe(true)
   })
 })

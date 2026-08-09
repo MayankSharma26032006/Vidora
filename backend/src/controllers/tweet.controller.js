@@ -1,5 +1,6 @@
 import mongoose, { isValidObjectId } from "mongoose"
 import { Tweet } from "../models/tweet.model.js"
+import { Like } from "../models/like.model.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
@@ -158,6 +159,9 @@ const deleteTweet = asyncHandler(async (req, res) => {
     }
 
     await Tweet.findByIdAndDelete(tweetId)
+
+    // likes on the deleted tweet would otherwise orphan
+    await Like.deleteMany({ tweet: tweetId })
 
     return res
         .status(200)

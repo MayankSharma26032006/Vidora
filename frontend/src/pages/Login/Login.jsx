@@ -1,7 +1,8 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { RiEyeLine, RiEyeOffLine, RiCheckLine } from "react-icons/ri"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import { RiEyeLine, RiEyeOffLine, RiCheckLine, RiTimeLine, RiMailSendLine } from "react-icons/ri"
 import { useAuth } from "../../context/AuthContext"
+import api from "../../services/api"
 import Logo from "../../components/ui/Logo"
 
 export default function Login() {
@@ -9,9 +10,13 @@ export default function Login() {
   const [password, setPassword] = useState("")
   const [remember, setRemember] = useState(false)
   const [showPass, setShowPass] = useState(false)
-  const [forgotOpen, setForgotOpen] = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState("")
+  const [unverified, setUnverified] = useState(false)
+  const [resending, setResending]   = useState(false)
+  const [resent, setResent]         = useState(false)
+  const [searchParams]          = useSearchParams()
+  const sessionExpired          = searchParams.get("expired") === "1"
 
   const { login } = useAuth()
   const navigate  = useNavigate()
@@ -19,16 +24,35 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault()
     if (!email || !password) { setError("Please fill in all fields."); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("Please enter a valid email address."); return }
     setError("")
     setLoading(true)
 
     try {
-      await login(email, password)
+      const data = await login(email, password)
+      const user = data?.data?.user
+      if (user && user.isEmailVerified === false) {
+        setUnverified(true)
+        return
+      }
       navigate("/")
     } catch (err) {
       setError(err.response?.data?.message || "Invalid email or password.")
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleResend() {
+    setResending(true)
+    setResent(false)
+    try {
+      await api.post("/user/resend-verification")
+      setResent(true)
+    } catch (err) {
+      setError(err.response?.data?.message || "Couldn't resend the email. Please try again.")
+    } finally {
+      setResending(false)
     }
   }
 
@@ -89,6 +113,33 @@ export default function Login() {
             <p className="text-sm text-zinc-500">Sign in to continue to your account.</p>
           </div>
 
+          {sessionExpired && (
+            <div className="mb-5 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm flex items-center gap-2.5">
+              <RiTimeLine className="shrink-0" />
+              Your session expired — please sign in again.
+            </div>
+          )}
+
+          {unverified && (
+            <div className="mb-5 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+              <p className="text-amber-400 text-sm font-medium flex items-center gap-2">
+                <RiMailSendLine className="shrink-0" />
+                {resent ? "Verification email sent." : "Please verify your email."}
+              </p>
+              <p className="text-zinc-400 text-xs mt-1.5 leading-relaxed">
+                Check your inbox and click the link we sent you to activate your account.
+              </p>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resending || resent}
+                className="mt-2.5 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {resending ? "Sending..." : resent ? "Email sent" : "Resend verification email"}
+              </button>
+            </div>
+          )}
+
           {error && (
             <div className="mb-5 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
               {error}
@@ -136,16 +187,10 @@ export default function Login() {
                 </button>
                 <span className="text-sm text-zinc-400">Remember me</span>
               </label>
-              <button type="button" onClick={() => setForgotOpen(p => !p)} className="text-sm text-amber-400 hover:text-amber-300 transition-colors">
+              <Link to="/forgot-password" className="text-sm text-amber-400 hover:text-amber-300 transition-colors">
                 Forgot password?
-              </button>
+              </Link>
             </div>
-
-            {forgotOpen && (
-              <div className="px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.06] text-xs text-zinc-400">
-                Password reset isn't set up yet — contact support for help recovering your account.
-              </div>
-            )}
 
             <button
               type="submit"

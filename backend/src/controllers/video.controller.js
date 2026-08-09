@@ -3,6 +3,7 @@ import { Video } from "../models/video.model.js"
 import { User } from "../models/user.model.js"
 import { Notification } from "../models/notification.model.js"
 import { Like } from "../models/like.model.js"
+import { Comment } from "../models/comment.model.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
@@ -100,9 +101,13 @@ const getAllVideos = asyncHandler(async(req,res)=>{
 
 // Pagination it limits the no of vid fetched and helps reducing load on db it
 // asks for page and limit otherwise takes default
+    const pageNum = parseInt(page, 10)
+    const limitNum = parseInt(limit, 10)
     const options = {
-        page:parseInt(page),
-        limit:parseInt(limit)
+        // NaN/negative/zero values would turn into a bad skip/limit and 500 —
+        // fall back to sane defaults instead
+        page: Number.isFinite(pageNum) && pageNum > 0 ? pageNum : 1,
+        limit: Number.isFinite(limitNum) && limitNum > 0 ? Math.min(limitNum, 50) : 10
     }
 
     const videos = await Video.aggregatePaginate(
@@ -139,27 +144,41 @@ const publishAVideo = asyncHandler(async(req,res)=>{
         throw new ApiError(400,"Thumbnail is required")
     }
 
-    const videoFile = await uploadOnCloudinary(videoLocalPath)
-    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+    const videoFile = await uploadOnCloudinary(videoLocalPath, "vidora/videos")
+    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath, "vidora/thumbnails")
     if(!videoFile?.url){
         throw new ApiError(500,"Failed to upload video file to Cloudinary")
     }
     if(!thumbnail?.url){
+        // the video file already made it to Cloudinary — don't leave it orphaned
+        await deleteFromCloudinary(videoFile.public_id, "video")
         throw new ApiError(500,"Failed to upload thumbnail to Cloudinary")
     }
-    const video = await Video.create({
-    videoFile: videoFile.url,
-    videoFilePublicId: videoFile.public_id,
-    thumbnail: thumbnail.url,
-    thumbnailPublicId: thumbnail.public_id,
-    title: title.trim(),
-    description: (description || "").trim(),
-    category: category?.trim() || "Other",
-    duration: videoFile.duration,
-    owner: req.user._id,
-    isPublished: isPublished === undefined ? true : (isPublished === true || isPublished === "true")
-})
+    let video
+    try {
+        video = await Video.create({
+            videoFile: videoFile.url,
+            videoFilePublicId: videoFile.public_id,
+            thumbnail: thumbnail.url,
+            thumbnailPublicId: thumbnail.public_id,
+            title: title.trim(),
+            description: (description || "").trim(),
+            category: category?.trim() || "Other",
+            duration: videoFile.duration,
+            owner: req.user._id,
+            isPublished: isPublished === undefined ? true : (isPublished === true || isPublished === "true")
+        })
+    } catch (createError) {
+        // DB write failed — remove the assets we just uploaded so they don't
+        // linger on Cloudinary as unreferenced (and billable) files
+        await deleteFromCloudinary(videoFile.public_id, "video")
+        await deleteFromCloudinary(thumbnail.public_id, "image")
+        throw createError
+    }
     if(!video){
+        // DB write failed — remove the assets we just uploaded
+        await deleteFromCloudinary(videoFile.public_id, "video")
+        await deleteFromCloudinary(thumbnail.public_id, "image")
         throw new ApiError(500,"Failed to publish video")
     }
     return res
@@ -246,6 +265,14 @@ const getVideoById = asyncHandler(async(req,res)=>{
     if(!video?.length){
         throw new ApiError(404,"Video not found")
     }
+    // Unpublished (private) videos are only reachable by their owner — anyone
+    // else gets a 404 so a direct URL can't leak private content.
+    if (!video[0].isPublished) {
+        const ownerId = video[0].owner?._id?.toString?.()
+        if (!req.user || ownerId !== req.user._id.toString()) {
+            throw new ApiError(404, "Video not found")
+        }
+    }
     if (req.user) {
         await User.findByIdAndUpdate(req.user._id, {
             $addToSet: { watchHistory: new mongoose.Types.ObjectId(videoId) }
@@ -282,8 +309,9 @@ const updateVideo = asyncHandler(async(req,res)=>{
         updateFields.description = description.trim()
     }
     if(req.file?.path){
-    await deleteFromCloudinary(video.thumbnailPublicId, "image")
-    const thumbnail = await uploadOnCloudinary(req.file.path)
+    // Upload the new thumbnail FIRST — if the upload fails, the old thumbnail
+    // is still live on Cloudinary instead of the video losing its thumbnail.
+    const thumbnail = await uploadOnCloudinary(req.file.path, "vidora/thumbnails")
     if(!thumbnail?.url){
         throw new ApiError(500,"Failed to upload thumbnail to Cloudinary")
     }
@@ -293,6 +321,13 @@ const updateVideo = asyncHandler(async(req,res)=>{
     const updatedVideo = await Video.findByIdAndUpdate(videoId,{
         $set:updateFields
     },{ returnDocument: 'after' })
+
+    // DB write succeeded — only now remove the replaced thumbnail. Deleting it
+    // before the write could leave the video pointing at a deleted asset if the
+    // update failed.
+    if (updateFields.thumbnailPublicId && video.thumbnailPublicId !== updateFields.thumbnailPublicId) {
+        await deleteFromCloudinary(video.thumbnailPublicId, "image")
+    }
     return res
     .status(200)
     .json(new ApiResponse(200,updatedVideo,"Video updated successfully"))
@@ -319,9 +354,15 @@ const deleteVideo = asyncHandler(async(req,res)=>{
         {savedVideos:videoId},
         {$pull:{savedVideos:videoId}}
     )
+    // collect comment ids before deleting so we can also remove likes on them
+    const commentIds = await Comment.find({ video: videoId }).distinct("_id")
     // clean up notifications and likes that referenced the deleted video
     await Notification.deleteMany({ video: videoId })
     await Like.deleteMany({ video: videoId })
+    // comments reference the video — remove them so they don't orphan in the DB
+    await Comment.deleteMany({ video: videoId })
+    // likes on the deleted comments would otherwise orphan
+    if (commentIds.length > 0) await Like.deleteMany({ comment: { $in: commentIds } })
     await deleteFromCloudinary(video.videoFilePublicId, "video")
     await deleteFromCloudinary(video.thumbnailPublicId, "image")
         return res

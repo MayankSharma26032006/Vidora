@@ -21,9 +21,17 @@ const api = axios.create({
 // a refresh instead of silently logging the user out.
 const SKIP_RETRY_URLS = ["/user/refresh-token", "/user/login"]
 
-// Single-flight token refresh. The backend rotates the refresh token on every
-// refresh, so concurrent 401s must share ONE refresh call — otherwise each
-// refresh invalidates the next one and the session dies mid-load.
+// True once the user has a valid session this page load (set by AuthContext).
+// Used to only treat refresh failures as "session expired" when the user WAS
+// signed in — guests hitting 401s must not be bounced to the login page.
+let sessionActive = false
+
+export function setSessionActive(active) {
+  sessionActive = active
+}
+
+// Single-flight token refresh: concurrent 401s share ONE refresh call so the
+// session doesn't die mid-load.
 let refreshPromise = null
 
 function refreshTokens() {
@@ -61,6 +69,12 @@ api.interceptors.response.use(
         await refreshTokens()
         return api(originalRequest)
       } catch {
+        // Refresh failed AND the user had a real session → it genuinely
+        // expired. Tell the app to show the "session expired" login screen.
+        if (sessionActive) {
+          sessionActive = false
+          window.dispatchEvent(new Event("vidora:session-expired"))
+        }
         return Promise.reject(error)
       }
     }

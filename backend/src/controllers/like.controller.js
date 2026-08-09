@@ -14,9 +14,14 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid video ID")
     }
 
-    const video = await Video.findById(videoId).select("owner")
+    const video = await Video.findById(videoId).select("owner isPublished")
 
     if (!video) {
+        throw new ApiError(404, "Video not found")
+    }
+
+    // a private video can't be liked by people who can't watch it
+    if (!video.isPublished && video.owner.toString() !== req.user._id.toString()) {
         throw new ApiError(404, "Video not found")
     }
 
@@ -121,10 +126,13 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 
 
 const getLikedVideos = asyncHandler(async (req, res) => {
+    // A video the user liked may have gone private since — drop it unless the
+    // user owns it (mirrors the saved-videos/history privacy rule).
+    const viewerId = new mongoose.Types.ObjectId(req.user._id)
     const likedVideos = await Like.aggregate([
         {
             $match: {
-                likedBy: new mongoose.Types.ObjectId(req.user._id),
+                likedBy: viewerId,
                 video: { $exists: true, $ne: null }
             }
         },
@@ -135,6 +143,14 @@ const getLikedVideos = asyncHandler(async (req, res) => {
                 foreignField: "_id",
                 as: "video",
                 pipeline: [
+                    {
+                        $match: {
+                            $or: [
+                                { isPublished: true },
+                                { owner: viewerId }
+                            ]
+                        }
+                    },
                     // get the owner of each video
                     {
                         $lookup: {

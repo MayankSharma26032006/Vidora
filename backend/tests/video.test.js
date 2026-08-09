@@ -12,6 +12,7 @@ import app from "../src/app.js"
 import { registerAndLogin, createVideo, TEMP_DIR } from "./helpers.js"
 import { Video } from "../src/models/video.model.js"
 import { Like } from "../src/models/like.model.js"
+import { Comment } from "../src/models/comment.model.js"
 
 beforeAll(connectTestDb)
 beforeEach(resetTestDb)
@@ -55,6 +56,39 @@ describe("POST /api/v1/videos", () => {
     expect(after).toBe(before)
   })
 
+  it("deletes the uploaded video from Cloudinary when the thumbnail upload fails (no orphan)", async () => {
+    const { uploadOnCloudinary, deleteFromCloudinary } = await import("../src/utils/cloudinary.js")
+    const { accessCookie } = await registerAndLogin()
+
+    // First call (videoFile) succeeds, second call (thumbnail) fails
+    uploadOnCloudinary
+      .mockClear()
+      .mockImplementationOnce(async () => ({ url: "https://cdn.test/v.mp4", public_id: "video-orphan", duration: 42.5 }))
+      .mockImplementationOnce(async () => null)
+
+    const res = await createVideo(accessCookie).expect(500)
+    expect(res.body.message).toBe("Failed to upload thumbnail to Cloudinary")
+
+    // the already-uploaded video file must be removed from Cloudinary
+    expect(deleteFromCloudinary).toHaveBeenCalledWith("video-orphan", "video")
+  })
+
+  it("deletes uploaded assets from Cloudinary when the DB write fails (no orphan)", async () => {
+    const { uploadOnCloudinary, deleteFromCloudinary } = await import("../src/utils/cloudinary.js")
+    const { accessCookie } = await registerAndLogin()
+
+    // both uploads succeed, but Video.create fails (duration missing)
+    uploadOnCloudinary
+      .mockClear()
+      .mockImplementationOnce(async () => ({ url: "https://cdn.test/v.mp4", public_id: "video-orphan2", duration: undefined }))
+      .mockImplementationOnce(async () => ({ url: "https://cdn.test/t.jpg", public_id: "thumb-orphan2" }))
+
+    await createVideo(accessCookie).expect(500)
+
+    expect(deleteFromCloudinary).toHaveBeenCalledWith("video-orphan2", "video")
+    expect(deleteFromCloudinary).toHaveBeenCalledWith("thumb-orphan2", "image")
+  })
+
   it("rejects a missing video file with 400", async () => {
     const { accessCookie } = await registerAndLogin()
     const res = await request(app)
@@ -91,6 +125,15 @@ describe("POST /api/v1/videos", () => {
     expect(video.videoFile).toMatch(/\.mp4$/)
     expect(video.thumbnail).toMatch(/\.jpg$/)
   })
+
+  it("uploads video files and thumbnails into their own Cloudinary folders", async () => {
+    const { uploadOnCloudinary } = await import("../src/utils/cloudinary.js")
+    uploadOnCloudinary.mockClear()
+    await userAndVideo()
+
+    expect(uploadOnCloudinary).toHaveBeenCalledWith(expect.any(String), "vidora/videos")
+    expect(uploadOnCloudinary).toHaveBeenCalledWith(expect.any(String), "vidora/thumbnails")
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -125,6 +168,32 @@ describe("GET /api/v1/videos", () => {
     const res = await request(app).get("/api/v1/videos").expect(200)
     expect(res.body.data.docs).toHaveLength(1)
     expect(res.body.data.docs[0].title).toBe("Test video")
+  })
+
+  it("hides unpublished videos from non-owners by direct URL", async () => {
+    const owner = await registerAndLogin({ username: "ownervid", email: "ownervid@example.com" })
+    const stranger = await registerAndLogin({ username: "strangervid", email: "strangervid@example.com" })
+    const res = await request(app)
+      .post("/api/v1/videos")
+      .set("Cookie", owner.accessCookie)
+      .field("title", "Secret")
+      .field("description", "Private")
+      .field("isPublished", "false")
+      .attach("videoFile", Buffer.from("fake-video-bytes"), "video.mp4")
+      .attach("thumbnail", Buffer.from("fake-thumb-bytes"), "thumb.jpg")
+      .expect(201)
+
+    // owner can view their own private video
+    await request(app)
+      .get(`/api/v1/videos/${res.body.data._id}`)
+      .set("Cookie", owner.accessCookie)
+      .expect(200)
+    // anyone else gets 404 — no leaked private content
+    await request(app)
+      .get(`/api/v1/videos/${res.body.data._id}`)
+      .set("Cookie", stranger.accessCookie)
+      .expect(404)
+    await request(app).get(`/api/v1/videos/${res.body.data._id}`).expect(404)
   })
 
   it("paginates results", async () => {
@@ -329,6 +398,26 @@ describe("DELETE /api/v1/videos/:videoId", () => {
       .set("Cookie", session.accessCookie)
       .expect(200)
     expect(saved.body.data).toHaveLength(0)
+  })
+
+  it("removes comments when the video is deleted (no orphans)", async () => {
+    const { session, video } = await userAndVideo()
+    const commenter = await registerAndLogin({ username: "commenter", email: "commenter@example.com" })
+    await request(app)
+      .post(`/api/v1/comments/${video._id}`)
+      .set("Cookie", commenter.accessCookie)
+      .send({ content: "nice" })
+      .expect(201)
+
+    const before = await Comment.countDocuments({ video: video._id })
+    expect(before).toBe(1)
+
+    await request(app)
+      .delete(`/api/v1/videos/${video._id}`)
+      .set("Cookie", session.accessCookie)
+      .expect(200)
+
+    expect(await Comment.countDocuments({ video: video._id })).toBe(0)
   })
 
   it("rejects an invalid id with 400", async () => {

@@ -78,6 +78,11 @@ describe("POST /api/v1/comments/:videoId", () => {
     const res = await addComment(bob.accessCookie, video._id, "   ").expect(400)
     expect(res.body.message).toBe("Comment content is required")
   })
+
+  it("rejects comments on a nonexistent video", async () => {
+    const { bob } = await setup()
+    await addComment(bob.accessCookie, "64f0abc1234567890def0001").expect(404)
+  })
 })
 
 describe("PATCH /api/v1/comments/c/:commentId", () => {

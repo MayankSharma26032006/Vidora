@@ -1,6 +1,7 @@
 import mongoose, { isValidObjectId } from "mongoose"
 import { Comment } from "../models/comment.model.js"
 import { Video } from "../models/video.model.js"
+import { Like } from "../models/like.model.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
@@ -13,6 +14,16 @@ const getVideoComments = asyncHandler(async (req, res) => {
 
     if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "Invalid video ID")
+    }
+
+    // Comment threads of private videos must not leak to people who can't watch
+    // the video. Only the video owner (or anyone, when published) may read them.
+    const video = await Video.findById(videoId).select("owner isPublished")
+    if (!video) {
+        throw new ApiError(404, "Video not found")
+    }
+    if (!video.isPublished && (!req.user || video.owner.toString() !== req.user._id.toString())) {
+        throw new ApiError(404, "Video not found")
     }
 
     const pipeline = [
@@ -49,9 +60,11 @@ const getVideoComments = asyncHandler(async (req, res) => {
         }
     ]
 
+    const pageNum = parseInt(page, 10)
+    const limitNum = parseInt(limit, 10)
     const options = {
-        page: parseInt(page),
-        limit: parseInt(limit)
+        page: Number.isFinite(pageNum) && pageNum > 0 ? pageNum : 1,
+        limit: Number.isFinite(limitNum) && limitNum > 0 ? Math.min(limitNum, 50) : 10
     }
 
     const comments = await Comment.aggregatePaginate(
@@ -77,6 +90,16 @@ const addComment = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Comment content is required")
     }
 
+    // reject comments on videos that don't exist (or are private to someone
+    // else) so the DB never accumulates orphaned comments
+    const video = await Video.findById(videoId).select("owner isPublished")
+    if (!video) {
+        throw new ApiError(404, "Video not found")
+    }
+    if (!video.isPublished && video.owner.toString() !== req.user._id.toString()) {
+        throw new ApiError(404, "Video not found")
+    }
+
     const comment = await Comment.create({
         content: content.trim(),
         video: videoId,
@@ -92,7 +115,6 @@ const addComment = asyncHandler(async (req, res) => {
     await comment.populate({ path: "owner", select: "fullname username avatar" })
 
     // notify the video owner about the new comment
-    const video = await Video.findById(videoId).select("owner")
     await createNotification({
         owner: video?.owner,
         actor: req.user._id,
@@ -160,6 +182,9 @@ const deleteComment = asyncHandler(async (req, res) => {
     }
 
     const deletedComment = await Comment.findByIdAndDelete(commentId)
+
+    // likes on the comment would otherwise orphan
+    await Like.deleteMany({ comment: commentId })
 
     // undo the notification when a comment is removed
     if (deletedComment) {

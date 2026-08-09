@@ -27,15 +27,30 @@ describe("POST /api/v1/user/register", () => {
     expect(res.body.success).toBe(true)
     expect(res.body.data.username).toBe("testuser")
     expect(res.body.data.email).toBe("test@example.com")
-    expect(res.body.data.fullname).toBe("test user") // schema lowercases fullname
+    expect(res.body.data.fullname).toBe("Test User") // display name keeps its case
     expect(res.body.data.password).toBeUndefined()
     expect(res.body.data.refreshToken).toBeUndefined()
+  })
+
+  it("uploads the register avatar into the avatars folder", async () => {
+    const { uploadOnCloudinary } = await import("../src/utils/cloudinary.js")
+    uploadOnCloudinary.mockClear()
+    await register({ username: "folderuser", email: "folder@example.com" }).expect(201)
+
+    expect(uploadOnCloudinary).toHaveBeenCalledWith(expect.any(String), "vidora/avatars")
   })
 
   it("rejects a duplicate email or username with 409", async () => {
     await register().expect(201)
     const res = await register().expect(409)
     expect(res.body.message).toBe("User already exists")
+  })
+
+  it("rejects a malformed email with 400", async () => {
+    const res = await register({ email: "not-an-email" }).expect(400)
+    expect(res.body.message).toBe("Invalid email format")
+    await register({ email: "missing@tld" }).expect(400)
+    await register({ email: "@nodomain.com" }).expect(400)
   })
 
   it("rejects missing required fields with 400", async () => {
@@ -81,6 +96,30 @@ describe("POST /api/v1/user/login", () => {
       .send({ username: "testuser", password: "password123" })
       .expect(200)
     expect(res.body.success).toBe(true)
+  })
+
+  it("logs in regardless of email/username case and surrounding spaces", async () => {
+    await register().expect(201)
+    // schema stores lowercased/trimmed; the query must match the same way
+    const res = await request(app)
+      .post("/api/v1/user/login")
+      .send({ email: "  Test@Example.COM ", password: "password123" })
+      .expect(200)
+    expect(res.body.success).toBe(true)
+
+    const byUsername = await request(app)
+      .post("/api/v1/user/login")
+      .send({ username: "TestUser", password: "password123" })
+      .expect(200)
+    expect(byUsername.body.success).toBe(true)
+  })
+
+  it("rejects a malformed email in the login field with 400", async () => {
+    const res = await request(app)
+      .post("/api/v1/user/login")
+      .send({ email: "garbage", password: "password123" })
+      .expect(400)
+    expect(res.body.message).toBe("Invalid email format")
   })
 
   it("rejects a wrong password with 401", async () => {
@@ -154,6 +193,21 @@ describe("POST /api/v1/user/refresh-token", () => {
     await request(app)
       .get("/api/v1/user/current-user")
       .set("Authorization", `Bearer ${newAccessToken}`)
+      .expect(200)
+  })
+
+  it("accepts the same refresh cookie twice (multi-tab safe)", async () => {
+    // Two tabs refresh at nearly the same moment with the SAME cookie. The
+    // refresh token must NOT rotate on refresh, or the second tab's request
+    // would be rejected and the user logged out.
+    const { refreshCookie } = await registerAndLogin()
+    await request(app)
+      .post("/api/v1/user/refresh-token")
+      .set("Cookie", refreshCookie)
+      .expect(200)
+    await request(app)
+      .post("/api/v1/user/refresh-token")
+      .set("Cookie", refreshCookie)
       .expect(200)
   })
 

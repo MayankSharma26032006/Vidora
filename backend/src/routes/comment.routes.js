@@ -5,12 +5,13 @@ import {
     updateComment,
     deleteComment
 } from "../controllers/comment.controller.js"
-import { verifyJWT } from "../middlewares/auth.middleware.js"
+import { verifyJWT, optionalAuth } from "../middlewares/auth.middleware.js"
 
 const router = Router()
 
-// Reading comments is public — only writes require auth
-router.route("/:videoId").get(getVideoComments).post(verifyJWT, addComment)
+// Reading comments is public (optional auth so private videos stay hidden) —
+// only writes require auth
+router.route("/:videoId").get(optionalAuth, getVideoComments).post(verifyJWT, addComment)
 router.route("/c/:commentId").patch(verifyJWT, updateComment).delete(verifyJWT, deleteComment)
 
 export default router 

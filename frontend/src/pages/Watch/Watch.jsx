@@ -37,6 +37,7 @@ export default function Watch() {
   const [video, setVideo]                 = useState(null)
   const [relatedVideos, setRelatedVideos] = useState([])
   const [liked, setLiked]                 = useState(false)
+  const [likesCount, setLikesCount]       = useState(0)
   const [subscribed, setSubscribed]       = useState(false)
   const [saved, setSaved]                 = useState(false)
   const [moreOpen, setMoreOpen]           = useState(false)
@@ -56,6 +57,8 @@ export default function Watch() {
         if (cancelled) return
         setVideo(res.data.data)
         setLiked(!!res.data.data.isLiked)
+        // likesCount already includes the current user's own like
+        setLikesCount(res.data.data.likesCount || 0)
         setSubscribed(!!res.data.data.isSubscribed)
         setSaved(!!res.data.data.isSaved)
       } catch {
@@ -85,6 +88,7 @@ export default function Watch() {
     try {
       await api.post(`/likes/toggle/v/${videoId}`)
       setLiked(p => !p)
+      setLikesCount(c => c + (liked ? -1 : 1))
     } catch {
       // keep current state on failure
     }
@@ -113,10 +117,6 @@ export default function Watch() {
   function handleShare() {
     const url = `${window.location.origin}/watch/${videoId}`
     navigator.clipboard?.writeText(url).catch(() => {})
-  }
-
-  function handleReport() {
-    setMoreOpen(false)
   }
 
   function openMore() {
@@ -181,7 +181,7 @@ export default function Watch() {
                   className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all ${liked ? "bg-amber-500/15 border-amber-500/40 text-amber-400" : "bg-white/[0.06] border-white/[0.08] text-zinc-400 hover:bg-white/[0.1] hover:text-zinc-200"}`}
                 >
                   {liked ? <RiThumbUpFill className="text-[16px]" /> : <RiThumbUpLine className="text-[16px]" />}
-                  <span>{formatViews((video?.likesCount || 0) + (liked ? 1 : 0))}</span>
+                  <span>{formatViews(likesCount)}</span>
                 </button>
                 <button
                   onClick={handleSave}
@@ -211,7 +211,6 @@ export default function Watch() {
                     ) : (
                       <div className="absolute right-0 top-10 w-40 bg-zinc-900 border border-white/[0.08] rounded-xl shadow-2xl shadow-black/60 overflow-hidden z-20">
                         <button onClick={() => setMoreView("playlists")} className="w-full text-left px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">Save to playlist</button>
-                        <button onClick={handleReport} className="w-full text-left px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">Report</button>
                         <button onClick={() => { handleShare(); setMoreOpen(false) }} className="w-full text-left px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">Copy link</button>
                       </div>
                     )

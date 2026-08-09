@@ -92,6 +92,10 @@ if (!isTest) {
     app.use('/api/v1/user/login', authLimiter)
     app.use('/api/v1/user/register', authLimiter)
     app.use('/api/v1/user/refresh-token', authLimiter)
+    // email abuse protection — same strict cap, so forgot-password /
+    // resend-verification can't be used to spam an inbox or probe addresses
+    app.use('/api/v1/user/forgot-password', authLimiter)
+    app.use('/api/v1/user/resend-verification', authLimiter)
     app.use('/api', apiLimiter)
 }
 

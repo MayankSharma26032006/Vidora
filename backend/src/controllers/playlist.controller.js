@@ -1,5 +1,6 @@
 import mongoose, { isValidObjectId } from "mongoose"
 import { Playlist } from "../models/playlist.model.js"
+import { Video } from "../models/video.model.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
@@ -36,6 +37,10 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid user ID")
     }
 
+    // Private videos must not be surfaced to other users through playlists —
+    // only the video owner can see them (and playlists are always authed).
+    const viewerId = new mongoose.Types.ObjectId(req.user._id)
+
     const playlists = await Playlist.aggregate([
         {
             $match: {
@@ -50,6 +55,14 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
                 as: "videos",
                 pipeline: [
                     {
+                        $match: {
+                            $or: [
+                                { isPublished: true },
+                                { owner: viewerId }
+                            ]
+                        }
+                    },
+                    {
                         $project: {
                             thumbnail: 1,
                             title: 1,
@@ -63,7 +76,9 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         {
             $addFields: {
                 totalVideos: { $size: "$videos" },
-                totalViews: { $sum: "$videos.views" }
+                totalViews: { $sum: "$videos.views" },
+                // first video's thumbnail so playlist cards can render one
+                thumbnail: { $arrayElemAt: ["$videos.thumbnail", 0] }
             }
         },
         {
@@ -73,6 +88,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
                 totalVideos: 1,
                 totalViews: 1,
                 updatedAt: 1,
+                thumbnail: 1,
                 videoIds: { $map: { input: "$videos", as: "v", in: "$$v._id" } }
             }
         }
@@ -91,6 +107,11 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid playlist ID")
     }
 
+    // Drop private videos a viewer isn't allowed to see (they're always authed
+    // here). Without this, a playlist would hand out the private video's
+    // Cloudinary videoFile URL to any authenticated user.
+    const viewerId = new mongoose.Types.ObjectId(req.user._id)
+
     const playlist = await Playlist.aggregate([
         {
             $match: {
@@ -104,6 +125,14 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                 foreignField: "_id",
                 as: "videos",
                 pipeline: [
+                    {
+                        $match: {
+                            $or: [
+                                { isPublished: true },
+                                { owner: viewerId }
+                            ]
+                        }
+                    },
                     {
                         $lookup: {
                             from: "users",
@@ -191,6 +220,16 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 
     if (playlist.owner.toString() !== req.user._id.toString()) {
         throw new ApiError(403, "You are not allowed to modify this playlist")
+    }
+
+    // Don't $addToSet a bogus/deleted video id — the $lookups downstream would
+    // yield null videos and the UI renders ghost cards.
+    const video = await Video.findById(videoId).select("_id isPublished owner")
+    if (!video) {
+        throw new ApiError(404, "Video not found")
+    }
+    if (!video.isPublished && video.owner.toString() !== req.user._id.toString()) {
+        throw new ApiError(404, "Video not found")
     }
 
     const updatedPlaylist = await Playlist.findByIdAndUpdate(

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react"
-import api from "../services/api"
+import api, { setSessionActive } from "../services/api"
 
 const AuthContext = createContext(null)
 
@@ -11,9 +11,24 @@ export function AuthProvider({ children }) {
     getCurrentUser()
   }, [])
 
+  // The axios interceptor fires this when a refresh fails while the user had a
+  // real session (e.g. the refresh token itself expired after 30 days). Send
+  // them to the login screen with a clear message instead of silently dropping
+  // them at a blank login.
+  useEffect(() => {
+    function onSessionExpired() {
+      setUser(null)
+      setSessionActive(false)
+      window.location.href = "/login?expired=1"
+    }
+    window.addEventListener("vidora:session-expired", onSessionExpired)
+    return () => window.removeEventListener("vidora:session-expired", onSessionExpired)
+  }, [])
+
   async function getCurrentUser() {
     try {
       const res = await api.get("/user/current-user")
+      setSessionActive(true)
       setUser(res.data.data)
     } catch {
       setUser(null)
@@ -24,6 +39,7 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     const res = await api.post("/user/login", { email, password })
+    setSessionActive(true)
     setUser(res.data.data.user)
     return res.data
   }
@@ -35,6 +51,7 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     await api.post("/user/logout")
+    setSessionActive(false)
     setUser(null)
   }
 

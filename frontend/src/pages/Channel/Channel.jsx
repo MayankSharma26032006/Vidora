@@ -4,7 +4,6 @@ import VideoCard from "../../components/cards/VideoCard"
 import PostCard from "../../components/posts/PostCard"
 import { useAuth } from "../../context/AuthContext"
 import api from "../../services/api"
-import { RiBellLine, RiBellFill } from "react-icons/ri"
 import { formatCount } from "../../utils/formatters"
 
 const TABS = ["Videos", "Playlists", "Community", "About"]
@@ -27,8 +26,6 @@ export default function Channel() {
   const [videos, setVideos]               = useState([])
   const [tweets, setTweets]               = useState([])
   const [subscribed, setSubscribed]       = useState(false)
-  const [notified, setNotified]           = useState(false)
-  const [joined, setJoined]               = useState(false)
   const [activeTab, setActiveTab]         = useState("Videos")
   const [loading, setLoading]             = useState(true)
 
@@ -68,7 +65,6 @@ export default function Channel() {
     try {
       await api.post(`/subscriptions/c/${channel?._id}`)
       setSubscribed(p => !p)
-      if (subscribed) setNotified(false)
     } catch {
       // keep current state on failure
     }
@@ -119,25 +115,11 @@ export default function Channel() {
               </div>
 
               <div className="flex items-center gap-2 pb-1 shrink-0">
-                {subscribed && (
-                  <button
-                    onClick={() => setNotified(p => !p)}
-                    className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${notified ? "bg-amber-500/15 border-amber-500/40 text-amber-400" : "bg-white/[0.06] border-white/[0.08] text-zinc-400 hover:text-zinc-200"}`}
-                  >
-                    {notified ? <RiBellFill className="text-[17px]" /> : <RiBellLine className="text-[17px]" />}
-                  </button>
-                )}
                 <button
                   onClick={handleSubscribe}
                   className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all ${subscribed ? "bg-white/[0.08] text-zinc-400 hover:bg-white/[0.12]" : "bg-white text-zinc-950 hover:bg-zinc-100"}`}
                 >
                   {subscribed ? "Subscribed" : "Subscribe"}
-                </button>
-                <button
-                  onClick={() => setJoined(p => !p)}
-                  className={`px-6 py-2.5 rounded-full text-sm font-semibold border transition-all ${joined ? "bg-amber-500/15 border-amber-500/40 text-amber-400" : "border-white/[0.12] text-zinc-300 hover:bg-white/[0.06]"}`}
-                >
-                  {joined ? "Joined" : "Join"}
                 </button>
               </div>
             </div>

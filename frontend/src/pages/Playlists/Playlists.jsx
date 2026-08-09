@@ -5,7 +5,7 @@ import Modal from "../../components/ui/Modal"
 import ConfirmDialog from "../../components/ui/ConfirmDialog"
 import { useAuth } from "../../context/AuthContext"
 import api from "../../services/api"
-import { RiPlayListLine, RiCloseLine, RiLockLine, RiAddLine, RiDeleteBinLine } from "react-icons/ri"
+import { RiPlayListLine, RiCloseLine, RiAddLine, RiDeleteBinLine } from "react-icons/ri"
 import { formatTimeAgo } from "../../utils/formatters"
 
 function CreatePlaylistModal({ open, onClose, onCreated }) {
@@ -199,11 +199,6 @@ function PlaylistCard({ playlist, onClick }) {
           <RiPlayListLine className="text-[12px]" />
           {playlist.totalVideos || 0} videos
         </div>
-        {playlist.isPrivate && (
-          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/70 text-zinc-300 text-[10px]">
-            <RiLockLine className="text-[11px]" /> Private
-          </div>
-        )}
       </div>
       <div>
         <h3 className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors mb-1">{playlist.name}</h3>

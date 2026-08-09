@@ -3,12 +3,11 @@ import { Link } from "react-router-dom"
 import VideoCard from "../../components/cards/VideoCard"
 import { useAuth } from "../../context/AuthContext"
 import api from "../../services/api"
-import { RiBellLine, RiBellFill, RiUserFollowLine } from "react-icons/ri"
+import { RiUserFollowLine } from "react-icons/ri"
 import { formatCount } from "../../utils/formatters"
 
 function CreatorCard({ creator }) {
   const [subscribed, setSubscribed] = useState(true)
-  const [notified, setNotified]     = useState(false)
   const initials = creator.fullname?.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "?"
 
   async function handleUnsubscribe() {
@@ -31,22 +30,12 @@ function CreatorCard({ creator }) {
         <p className="text-xs text-zinc-600 mb-1">@{creator.username}</p>
         <p className="text-xs text-zinc-500">{formatCount(creator.subscribersCount || 0)} subscribers</p>
       </div>
-      <div className="flex items-center gap-2 w-full">
-        <button
-          onClick={handleUnsubscribe}
-          className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all bg-white/[0.08] text-zinc-400 hover:bg-white/[0.12]"
-        >
-          {subscribed ? "Subscribed" : "Subscribe"}
-        </button>
-        {subscribed && (
-          <button
-            onClick={() => setNotified(p => !p)}
-            className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all shrink-0 ${notified ? "bg-amber-500/15 border-amber-500/40 text-amber-400" : "bg-white/[0.06] border-white/[0.08] text-zinc-500 hover:text-zinc-300"}`}
-          >
-            {notified ? <RiBellFill className="text-[14px]" /> : <RiBellLine className="text-[14px]" />}
-          </button>
-        )}
-      </div>
+      <button
+        onClick={handleUnsubscribe}
+        className="w-full py-2 rounded-xl text-xs font-semibold transition-all bg-white/[0.08] text-zinc-400 hover:bg-white/[0.12]"
+      >
+        {subscribed ? "Subscribed" : "Subscribe"}
+      </button>
     </div>
   )
 }
@@ -71,8 +60,9 @@ export default function Subscriptions() {
         const channels = (res.data.data || []).map(s => s.channel || s).filter(Boolean)
         if (!cancelled) setCreators(channels)
 
-        const videosRes = await api.get("/videos", { params: { page: 1, limit: 6, sortBy: "createdAt", sortType: "desc" } })
-        if (!cancelled) setLatestVideos(videosRes.data.data.docs || [])
+        // videos from the channels the user actually subscribed to
+        const videosRes = await api.get("/subscriptions/feed", { params: { limit: 6 } })
+        if (!cancelled) setLatestVideos(videosRes.data.data || [])
       } catch {
         if (!cancelled) setCreators([])
       } finally {

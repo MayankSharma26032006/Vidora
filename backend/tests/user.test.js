@@ -67,7 +67,7 @@ describe("GET /api/v1/user/watch-history", () => {
     expect(res.body.data).toHaveLength(1)
     expect(res.body.data[0]._id.toString()).toBe(video._id.toString())
     // owner fullname comes through (regression: projection used fullName, not fullname)
-    expect(res.body.data[0].owner.fullname).toBe("test user")
+    expect(res.body.data[0].owner.fullname).toBe("Test User")
   })
 })
 
@@ -105,8 +105,18 @@ describe("PATCH /api/v1/user/update-account", () => {
       .set("Cookie", accessCookie)
       .send({ fullName: "New Name", email: "newname@example.com" })
       .expect(200)
-    expect(res.body.data.fullname).toBe("new name") // schema lowercases
+    expect(res.body.data.fullname).toBe("New Name") // display name keeps its case
     expect(res.body.data.email).toBe("newname@example.com")
+  })
+
+  it("rejects a malformed email with 400", async () => {
+    const { accessCookie } = await registerAndLogin()
+    const res = await request(app)
+      .patch("/api/v1/user/update-account")
+      .set("Cookie", accessCookie)
+      .send({ fullName: "New Name", email: "not-an-email" })
+      .expect(400)
+    expect(res.body.message).toBe("Invalid email format")
   })
 
   it("rejects missing fields", async () => {
@@ -137,6 +147,27 @@ describe("PATCH /api/v1/user/update-avatar", () => {
       .attach("avatar", Buffer.from("fake-avatar"), "new-avatar.jpg")
       .expect(200)
     expect(res.body.data.avatar).toMatch(/\.jpg$/)
+  })
+
+  it("uploads avatars and covers into their own Cloudinary folders", async () => {
+    const { uploadOnCloudinary } = await import("../src/utils/cloudinary.js")
+    uploadOnCloudinary.mockClear()
+    const { accessCookie } = await registerAndLogin()
+
+    await request(app)
+      .patch("/api/v1/user/update-avatar")
+      .set("Cookie", accessCookie)
+      .attach("avatar", Buffer.from("fake-avatar"), "avatar-2.jpg")
+      .expect(200)
+    expect(uploadOnCloudinary).toHaveBeenCalledWith(expect.any(String), "vidora/avatars")
+
+    uploadOnCloudinary.mockClear()
+    await request(app)
+      .patch("/api/v1/user/update-cover")
+      .set("Cookie", accessCookie)
+      .attach("coverImage", Buffer.from("fake-cover"), "cover-2.jpg")
+      .expect(200)
+    expect(uploadOnCloudinary).toHaveBeenCalledWith(expect.any(String), "vidora/covers")
   })
 })
 
