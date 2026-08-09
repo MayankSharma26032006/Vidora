@@ -25,6 +25,7 @@ describe("POST /api/v1/user/verify-email", () => {
 
     expect(user.isEmailVerified).toBe(false)
     expect(user.emailVerificationToken).toBeTruthy()
+    expect(user.emailVerificationToken).toMatch(/^\d{6}$/)
 
     const res = await request(app)
       .post("/api/v1/user/verify-email")
@@ -36,6 +37,17 @@ describe("POST /api/v1/user/verify-email", () => {
     const verified = await User.findById(user._id)
     expect(verified.isEmailVerified).toBe(true)
     expect(verified.emailVerificationToken).toBe("")
+  })
+
+  it("verifies the email with a code in the code field", async () => {
+    await register().expect(201)
+    const user = await User.findOne({ email: "test@example.com" })
+
+    const res = await request(app)
+      .post("/api/v1/user/verify-email")
+      .send({ code: user.emailVerificationToken })
+      .expect(200)
+    expect(res.body.data.isEmailVerified).toBe(true)
   })
 
   it("rejects an unknown token with 400", async () => {

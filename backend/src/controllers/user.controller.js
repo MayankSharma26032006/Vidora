@@ -39,14 +39,14 @@ const getFrontendUrl = () => process.env.FRONTEND_URL || "http://localhost:5173"
 
 
 const sendVerificationEmail = async (user) => {
-  const token = crypto.randomBytes(32).toString("hex");
-  user.emailVerificationToken = token;
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  user.emailVerificationToken = code;
   user.emailVerificationTokenExpiry = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
   await user.save({ validateBeforeSave: false });
   await sendMail({
     to: user.email,
     subject: "Verify your VidOra account",
-    text: `Hi ${user.fullname},\n\nVerify your email to activate your VidOra account:\n${getFrontendUrl()}/verify-email?token=${token}\n\nThis link expires in 24 hours.\n\nIf you didn't create this account, you can ignore this email.`,
+    text: `Hi ${user.fullname},\n\nYour VidOra verification code is:\n\n${code}\n\nEnter it on the site to activate your account, or click the link below:\n${getFrontendUrl()}/verify-email?token=${code}\n\nThis code expires in 24 hours.\n\nIf you didn't create this account, you can ignore this email.`,
   });
 };
 
@@ -162,7 +162,7 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken"
+    "-password -refreshToken -emailVerificationToken -emailVerificationTokenExpiry -passwordResetToken -passwordResetTokenExpiry"
   )
 
   if(!createdUser){
@@ -680,11 +680,12 @@ const getWatchHistory = asyncHandler(async(req,res)=>{
 })
 
 const verifyEmail = asyncHandler(async(req,res)=>{
-  const { token } = req.body
-  if(!token){
-    throw new ApiError(400,"Verification token is required")
+  const { token, code } = req.body
+  const verification = token || code
+  if(!verification){
+    throw new ApiError(400,"Verification token or code is required")
   }
-  const user = await User.findOne({ emailVerificationToken: token })
+  const user = await User.findOne({ emailVerificationToken: verification })
   if(!user){
     throw new ApiError(400,"Invalid or expired verification token")
   }

@@ -96,6 +96,7 @@ if (!isTest) {
     
     app.use('/api/v1/user/forgot-password', authLimiter)
     app.use('/api/v1/user/resend-verification', authLimiter)
+    app.use('/api/v1/user/verify-email', authLimiter)
     app.use('/api', apiLimiter)
 }
 
