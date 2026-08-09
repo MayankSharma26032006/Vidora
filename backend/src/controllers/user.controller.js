@@ -172,7 +172,7 @@ const registerUser = asyncHandler(async (req, res) => {
   
   
   
-  sendVerificationEmail(createdUser).catch((mailError) => {
+  sendVerificationEmail(await User.findById(createdUser._id)).catch((mailError) => {
     console.error("Failed to send verification email:", mailError?.message);
   });
 
