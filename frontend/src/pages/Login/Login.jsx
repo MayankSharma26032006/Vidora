@@ -1,8 +1,7 @@
 import { useState } from "react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
-import { RiEyeLine, RiEyeOffLine, RiCheckLine, RiTimeLine, RiMailSendLine } from "react-icons/ri"
+import { RiEyeLine, RiEyeOffLine, RiCheckLine, RiTimeLine } from "react-icons/ri"
 import { useAuth } from "../../context/AuthContext"
-import api from "../../services/api"
 import Logo from "../../components/ui/Logo"
 
 export default function Login() {
@@ -12,9 +11,6 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState("")
-  const [unverified, setUnverified] = useState(false)
-  const [resending, setResending]   = useState(false)
-  const [resent, setResent]         = useState(false)
   const [searchParams]          = useSearchParams()
   const sessionExpired          = searchParams.get("expired") === "1"
 
@@ -29,30 +25,14 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const data = await login(email, password)
-      const user = data?.data?.user
-      if (user && user.isEmailVerified === false) {
-        setUnverified(true)
-        return
-      }
+      await login(email, password)
+      // Unverified users are let in too — the app shell shows a dismissible
+      // "verify your email" banner instead of blocking the account.
       navigate("/")
     } catch (err) {
       setError(err.response?.data?.message || "Invalid email or password.")
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function handleResend() {
-    setResending(true)
-    setResent(false)
-    try {
-      await api.post("/user/resend-verification")
-      setResent(true)
-    } catch (err) {
-      setError(err.response?.data?.message || "Couldn't resend the email. Please try again.")
-    } finally {
-      setResending(false)
     }
   }
 
@@ -117,26 +97,6 @@ export default function Login() {
             <div className="mb-5 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm flex items-center gap-2.5">
               <RiTimeLine className="shrink-0" />
               Your session expired — please sign in again.
-            </div>
-          )}
-
-          {unverified && (
-            <div className="mb-5 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <p className="text-amber-400 text-sm font-medium flex items-center gap-2">
-                <RiMailSendLine className="shrink-0" />
-                {resent ? "Verification email sent." : "Please verify your email."}
-              </p>
-              <p className="text-zinc-400 text-xs mt-1.5 leading-relaxed">
-                Check your inbox and click the link we sent you to activate your account.
-              </p>
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={resending || resent}
-                className="mt-2.5 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {resending ? "Sending..." : resent ? "Email sent" : "Resend verification email"}
-              </button>
             </div>
           )}
 
