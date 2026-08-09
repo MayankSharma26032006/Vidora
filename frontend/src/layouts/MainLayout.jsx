@@ -16,7 +16,7 @@ export default function MainLayout() {
   const [verifyError, setVerifyError] = useState("")
   const [justVerified, setJustVerified] = useState(false)
 
-  const showVerifyBanner = user && user.isEmailVerified === false && !dismissed
+  const showVerifyBanner = user && user.isEmailVerified === false && !dismissed && user.smtpConfigured === true
 
   async function handleResend() {
     setResending(true)

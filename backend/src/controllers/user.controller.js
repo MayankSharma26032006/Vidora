@@ -33,7 +33,8 @@ const cookieOptions = {
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
-const getFrontendUrl = () => process.env.FRONTEND_URL || "http://localhost:5173";
+const getFrontendUrl = () => process.env.FRONTEND_URL || "http://localhost:5173"
+const isSmtpConfigured = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 
 
 
@@ -225,6 +226,7 @@ const loginUser = asyncHandler(async (req, res) => {
         200,
         {
           user: loggedInUser,
+          smtpConfigured: isSmtpConfigured(),
           accessToken,
           refreshToken
         },
@@ -324,7 +326,7 @@ const changeCurrentPassword = asyncHandler(async(req,res)=>{
 const getCurrentUser = asyncHandler(async(req,res)=>{
   return res
   .status(200)
-  .json(new ApiResponse(200,req.user,"current user fetched successfully"))
+  .json(new ApiResponse(200,{ ...req.user.toObject(), smtpConfigured: isSmtpConfigured() },"current user fetched successfully"))
 })
 
 const updateAccountDetails = asyncHandler(async(req,res)=>{
