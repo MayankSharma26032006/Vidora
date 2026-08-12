@@ -12,6 +12,8 @@ Upload and stream videos, share short-form posts, build playlists, and track cha
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Cloudinary](https://img.shields.io/badge/Cloudinary-Media_Storage-3448C5?logo=cloudinary&logoColor=white)](https://cloudinary.com/)
 
+**🔗 Live demo:** [vidora-eight.vercel.app](https://vidora-eight.vercel.app) · **API:** [vidora-395i.onrender.com](https://vidora-395i.onrender.com)
+
 
 </div>
 
@@ -25,6 +27,7 @@ Upload and stream videos, share short-form posts, build playlists, and track cha
 - [Architecture](#️-architecture)
 - [API Reference](#-api-reference)
 - [Getting Started](#-getting-started)
+- [Deployment](#-deployment)
 - [Roadmap](#️-roadmap)
 - [Contributing](#-contributing)
 - [Author](#-author)
@@ -309,13 +312,39 @@ VITE_API_URL=https://your-backend-url.example.com
 ```
 ---
 
+## 🚀 Deployment
+
+The app is live — pushing to `main` auto-deploys both services via GitHub webhooks.
+
+| Piece | Host | Where |
+|---|---|---|
+| **Frontend** (React + Vite SPA) | [Vercel](https://vercel.com) | https://vidora-eight.vercel.app |
+| **Backend** (Express API) | [Render](https://render.com) | https://vidora-395i.onrender.com |
+| **Database** (MongoDB) | [MongoDB Atlas](https://www.mongodb.com/atlas) | M0 free cluster |
+| **Media** (videos & images) | [Cloudinary](https://cloudinary.com) | Media delivery |
+
+### Frontend (Vercel)
+- **Framework preset:** Vite — build command `npm run build`, output directory `dist`
+- `frontend/vercel.json` adds an SPA rewrite so client routes (`/login`, `/register`, …) load on direct visits and refreshes
+- **Env:** `VITE_API_URL=https://vidora-395i.onrender.com`
+
+### Backend (Render)
+- **Build:** `npm install` · **Start:** `npm start` (`node -r dotenv/config src/index.js`)
+- **Env:** `MONGODB_URL`, `CORS_ORIGIN`, `ACCESS/REFRESH_TOKEN_*`, `CLOUDINARY_*`, `FRONTEND_URL`, optional `SMTP_*`
+- Render's free tier spins down after ~15 min of idle — a UptimeRobot monitor (or a paid instance) keeps it warm
+
+### CI/CD
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push to `main` and every PR: backend tests (Vitest + Supertest), plus frontend lint, tests (Vitest + React Testing Library), and a production build.
+
+---
+
 ## 🗺️ Roadmap
 
 - [x] Notifications system (real-time, SSE)
 - [x] Community posts (tweets)
 - [x] Email verification & password reset
 - [x] Unit & integration test coverage (backend + frontend, CI)
-- [ ] Deployment (frontend + backend hosted with live demo link)
+- [x] Deployment — [vidora-eight.vercel.app](https://vidora-eight.vercel.app) (frontend) · [vidora-395i.onrender.com](https://vidora-395i.onrender.com) (API)
 - [ ] Video quality/resolution selection
 - [ ] Full-text search improvements
 
