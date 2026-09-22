@@ -47,6 +47,7 @@ This project was built as a hands-on deep dive into production-style backend arc
 **Authentication & Accounts**
 - Secure JWT-based authentication with access + refresh token rotation
 - HTTP-only cookie sessions and bcrypt password hashing
+- Email verification with a 6-digit OTP screen right after signup (per-email attempt lockout, resend cooldown + cap, 30-min code expiry)
 - Editable profile, avatar, and cover image (Cloudinary-backed)
 
 **Video Platform**
@@ -274,13 +275,32 @@ RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX=600
 AUTH_RATE_LIMIT_MAX=20
 
-# ---------- Email (only needed to actually deliver mail) ----------
+# ---------- Email delivery ----------
+# Provider is picked automatically — first configured wins:
+#   1. RESEND_API_KEY  → Resend REST API (free: 100/day, 3000/mo)
+#   2. EMAILJS_*       → EmailJS REST API (server-side, free: ~200/mo)
+#   3. SMTP_*          → nodemailer
+#   4. none            → emails log to the console (dev only)
+#
+# RESEND NOTE — sender address: sending from a custom address requires a
+# verified domain (DNS records). Until then the shared test sender
+# `onboarding@resend.dev` is used, so demo emails show a generic Resend
+# "from" address. That's expected, not a bug — and while on the test sender
+# Resend only delivers to the account owner's own inbox.
+RESEND_API_KEY=
+RESEND_FROM=
+
+# EmailJS (server-side): private key comes from Account → Security.
+EMAILJS_SERVICE_ID=
+EMAILJS_TEMPLATE_ID=
+EMAILJS_PUBLIC_KEY=
+EMAILJS_PRIVATE_KEY=
+
 # Base URL of the deployed frontend — used to build verification / password
 # reset links inside the emails. MUST be your real frontend URL in production.
 FRONTEND_URL=http://localhost:5173
 
-# Leave SMTP_* empty to log emails to the console instead (dev only).
-# Set them on Render so verify / reset emails are actually delivered.
+# SMTP fallback (nodemailer). SMTP_FROM defaults to SMTP_USER when omitted.
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=

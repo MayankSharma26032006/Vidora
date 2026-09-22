@@ -7,13 +7,15 @@ import {
     deleteVideo,
     togglePublishStatus
 } from "../controllers/video.controller.js"
-import { verifyJWT, optionalAuth } from "../middlewares/auth.middleware.js"
+import { verifyJWT, optionalAuth, requireVerifiedEmail } from "../middlewares/auth.middleware.js"
 import { upload } from "../middlewares/multer.middleware.js"
 
 const router = Router()
 
 router.route("/").get(getAllVideos).post(
     verifyJWT,
+    // Gated: public video uploads are the highest-value spam target.
+    requireVerifiedEmail,
     upload.fields([
         { name: "videoFile", maxCount: 1 },
         { name: "thumbnail", maxCount: 1 }

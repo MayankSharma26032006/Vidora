@@ -78,6 +78,29 @@ const userSchema = new Schema({
         type:Date,
         default:null,
     },
+    // Failed verification attempts against the CURRENT code. Reset whenever a
+    // new OTP is issued (register / resend) or on successful verification.
+    // Stored on the user doc so the lockout survives restarts and works
+    // across IPs; its lifetime is TTL-bound to the OTP itself.
+    emailVerificationAttempts:{
+        type:Number,
+        default:0,
+    },
+    // Resend throttling for the pre-login resend endpoint: max resends per
+    // email within a rolling window (see RESEND_MAX_COUNT in user.controller).
+    verificationResendCount:{
+        type:Number,
+        default:0,
+    },
+    verificationResendWindowStart:{
+        type:Date,
+        default:null,
+    },
+    // When the current code was issued — drives the resend cooldown.
+    verificationLastIssuedAt:{
+        type:Date,
+        default:null,
+    },
     passwordResetToken:{
         type:String,
         default:"",
@@ -122,7 +145,11 @@ userSchema.methods.generateRefreshToken = function(){
         },
         process.env.REFRESH_TOKEN_SECRET,
         {
-            expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+            // Fallback required: jsonwebtoken throws "expiresIn should be a
+            // number of seconds or string representing a timespan" when this
+            // is undefined, which 500s every login. Matches the default in
+            // tests/setup-env.js; production should still set it explicitly.
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "10d",
         }
     )
 

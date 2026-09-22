@@ -300,3 +300,50 @@ describe("POST /api/v1/user/change-password", () => {
       .expect(400)
   })
 })
+
+
+
+
+
+
+
+describe("REFRESH_TOKEN_EXPIRY fallback (regression guard)", () => {
+  // Regression guard for the audit finding: without the || "10d" fallback in
+  // generateRefreshToken, an unset REFRESH_TOKEN_EXPIRY made jsonwebtoken's
+  // sign throw and every login 500. This test runs with the var deleted so
+  // the fallback branch is the only thing between the request and a 500.
+  const ORIGINAL = process.env.REFRESH_TOKEN_EXPIRY
+
+  it("logs in with 200 and issues a valid 10d refresh token when the var is unset", async () => {
+    delete process.env.REFRESH_TOKEN_EXPIRY
+    try {
+      const email = "fallback@example.com"
+      await register({ email, username: "fallbackuser" }).expect(201)
+
+      const res = await request(app)
+        .post("/api/v1/user/login")
+        .send({ email, password: "password123" })
+        .expect(200)
+
+      const cookie = cookieFrom(res, "refreshToken")
+      expect(cookie).toBeTruthy()
+
+      // Decode the signed cookie value: the exp-iat gap must be exactly
+      // 864000 s (the "10d" fallback), proving the token carries a sane,
+      // deliberate lifetime rather than a broken one.
+      const jwt = (await import("jsonwebtoken")).default
+      const raw = cookie.split(";")[0].split("=").slice(1).join("=")
+      const decoded = jwt.decode(raw)
+      expect(decoded.exp).toBeGreaterThan(decoded.iat)
+      expect(decoded.exp - decoded.iat).toBe(864000)
+
+      // The token must actually work for a refresh.
+      await request(app)
+        .post("/api/v1/user/refresh-token")
+        .set("Cookie", cookie)
+        .expect(200)
+    } finally {
+      process.env.REFRESH_TOKEN_EXPIRY = ORIGINAL
+    }
+  })
+})

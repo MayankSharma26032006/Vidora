@@ -7,7 +7,7 @@ import {ApiResponse} from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose, { isValidObjectId } from "mongoose";
 import crypto from "crypto";
-import { sendMail } from "../utils/mailer.js";
+import { sendMail, isEmailDeliveryConfigured } from "../utils/emailSender.js";
 
 
 
@@ -30,24 +30,110 @@ const cookieOptions = {
 };
 
 
-const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+// OTP validity: 30 minutes. A 6-digit code on a public (rate-limited but
+// still guessable) endpoint should not stay valid for a full day; a fresh
+// one can be re-issued in seconds. See expiry_minutes in the email template.
+const VERIFY_TOKEN_TTL_MS = 30 * 60 * 1000;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
+// Failed OTP verification attempts allowed before the code is invalidated
+// (tracked per-email on the user document, not per-IP).
+const VERIFY_OTP_MAX_ATTEMPTS = 5;
+
+// Minimum gap between two issued codes (resend cooldown). Fresh
+// registrations are never throttled by this.
+const OTP_ISSUANCE_COOLDOWN_MS = 60 * 1000;
+
+// Resend cap: max resends per email within a rolling window. Protects the
+// email provider's quota and real inboxes from slow-drip abuse.
+const RESEND_MAX_COUNT = 5;
+const RESEND_WINDOW_MS = 15 * 60 * 1000;
+
 const getFrontendUrl = () => process.env.FRONTEND_URL || "http://localhost:5173"
-const isSmtpConfigured = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 
 
 
 
-const sendVerificationEmail = async (user) => {
+// ── Single "issue an OTP" code path ──────────────────────────────────────
+// Used by BOTH registration and every resend flow. This is what guarantees
+// the failed-attempt counter is reset whenever a fresh code supersedes an
+// old one — a user can never be locked out by attempts made against a code
+// that has already been re-issued, because there is no alternate issuance
+// path that could skip the reset.
+//
+// throwOnSend: false → mail failures are logged and swallowed (used during
+// registration so signup never fails because of the mail provider).
+// true → mail/provider errors propagate (429 from cooldown/cap included).
+// sendEmail: false → persist the code and return it WITHOUT delivering;
+// registration uses this so the code is stored deterministically before the
+// 201 response, then triggers delivery itself in the background.
+const issueVerificationCode = async (user, { throwOnSend = false, sendEmail = true } = {}) => {
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const now = Date.now();
+  const lastIssued = user.verificationLastIssuedAt?.getTime?.() || 0;
+
+  // Rolling resend window bookkeeping (shared by both resend endpoints).
+  let resendCount = user.verificationResendCount || 0;
+  let resendWindowStart = user.verificationResendWindowStart;
+  if (!resendWindowStart || now - resendWindowStart.getTime() > RESEND_WINDOW_MS) {
+    resendCount = 0;
+    resendWindowStart = new Date(now);
+  }
+
+  // Cooldown between two codes.
+  if (lastIssued && now - lastIssued < OTP_ISSUANCE_COOLDOWN_MS) {
+    if (throwOnSend) {
+      throw new ApiError(429, "Please wait a minute before requesting a new code.");
+    }
+    return { throttled: true };
+  }
+
+  // Total-resend cap (per email, rolling window). The very first issuance —
+  // registration — is exempt: the cap exists to stop slow-drip abuse of the
+  // resend endpoints, not to penalize fresh signups.
+  if (lastIssued && resendCount >= RESEND_MAX_COUNT) {
+    if (throwOnSend) {
+      throw new ApiError(429, "Too many codes requested. Try again later.");
+    }
+    return { throttled: true };
+  }
+
   const code = String(Math.floor(100000 + Math.random() * 900000));
   user.emailVerificationToken = code;
-  user.emailVerificationTokenExpiry = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
+  user.emailVerificationTokenExpiry = new Date(now + VERIFY_TOKEN_TTL_MS);
+  // A fresh code invalidates any lockout accumulated against the old one.
+  user.emailVerificationAttempts = 0;
+  user.verificationResendCount = lastIssued ? resendCount + 1 : 0;
+  user.verificationResendWindowStart = resendWindowStart;
+  user.verificationLastIssuedAt = new Date(now);
   await user.save({ validateBeforeSave: false });
+
+  // Registration path: the code is persisted (above); delivery is the
+  // caller's job, run in the background.
+  if (!sendEmail) return { throttled: false, code };
+
+  try {
+    await sendVerificationEmail(user, code);
+  } catch (mailError) {
+    console.error("Failed to send verification email:", mailError?.message);
+    if (throwOnSend) throw mailError;
+  }
+  return { throttled: false, code };
+};
+
+// Email-crafting for verification codes — kept separate from issuance so
+// registration can persist the code synchronously and send mail in the
+// background (a slow provider must never delay or fail signup).
+const sendVerificationEmail = async (user, code) => {
+  const expiryMinutes = Math.round(VERIFY_TOKEN_TTL_MS / 60000);
   await sendMail({
     to: user.email,
     subject: "Verify your VidOra account",
-    text: `Hi ${user.fullname},\n\nYour VidOra verification code is:\n\n${code}\n\nEnter it on the site to activate your account, or click the link below:\n${getFrontendUrl()}/verify-email?token=${code}\n\nThis code expires in 24 hours.\n\nIf you didn't create this account, you can ignore this email.`,
+    text: `Hi ${user.fullname},\n\nYour VidOra verification code is:\n\n${code}\n\nEnter it on the site within ${expiryMinutes} minutes, or click the link below:\n${getFrontendUrl()}/verify-email?token=${code}\n\nIf you didn't create this account, you can ignore this email.`,
+    html: `<p>Hi ${user.fullname},</p><p>Your VidOra verification code is:</p><p style="font-size:28px;font-weight:bold;letter-spacing:6px;">${code}</p><p>Enter it on the site within ${expiryMinutes} minutes, or <a href="${getFrontendUrl()}/verify-email?token=${code}">click here to verify</a>.</p><p>If you didn't create this account, you can ignore this email.</p>`,
   });
 };
 
@@ -173,9 +259,18 @@ const registerUser = asyncHandler(async (req, res) => {
   
   
   
-  sendVerificationEmail(await User.findById(createdUser._id)).catch((mailError) => {
-    console.error("Failed to send verification email:", mailError?.message);
-  });
+  // Same issuance path as resends — resets the attempt counter and is never
+  // throttled for a brand-new account. The code is PERSISTED BEFORE the 201
+  // is returned so the OTP screen (and any client flow) can rely on it
+  // existing the moment signup succeeds; only the mail send runs in the
+  // background so a slow provider can never delay or fail registration.
+  const freshUser = await User.findById(createdUser._id);
+  const { code: freshCode } = await issueVerificationCode(freshUser, { sendEmail: false });
+  if (freshCode) {
+    sendVerificationEmail(freshUser, freshCode).catch((mailError) => {
+      console.error("Failed to send verification email:", mailError?.message);
+    });
+  }
 
   return res.status(201).json(
     new ApiResponse(201, createdUser, "User registered successfully. Please verify your email to unlock your account.")
@@ -226,7 +321,9 @@ const loginUser = asyncHandler(async (req, res) => {
         200,
         {
           user: loggedInUser,
-          smtpConfigured: isSmtpConfigured(),
+          // True when any real delivery provider (Resend / EmailJS / SMTP) is
+          // configured — drives the "verify your email" banner visibility.
+          smtpConfigured: isEmailDeliveryConfigured(),
           accessToken,
           refreshToken
         },
@@ -326,7 +423,7 @@ const changeCurrentPassword = asyncHandler(async(req,res)=>{
 const getCurrentUser = asyncHandler(async(req,res)=>{
   return res
   .status(200)
-  .json(new ApiResponse(200,{ ...req.user.toObject(), smtpConfigured: isSmtpConfigured() },"current user fetched successfully"))
+  .json(new ApiResponse(200,{ ...req.user.toObject(), smtpConfigured: isEmailDeliveryConfigured() },"current user fetched successfully"))
 })
 
 const updateAccountDetails = asyncHandler(async(req,res)=>{
@@ -682,14 +779,51 @@ const getWatchHistory = asyncHandler(async(req,res)=>{
 })
 
 const verifyEmail = asyncHandler(async(req,res)=>{
-  const { token, code } = req.body
-  const verification = token || code
-  if(!verification){
+  const { token, code, email } = req.body
+  if(!token && !code){
     throw new ApiError(400,"Verification token or code is required")
   }
-  const user = await User.findOne({ emailVerificationToken: verification })
-  if(!user){
+
+  // Link flow: { token } uniquely identifies the user, so no email is needed.
+  // OTP flow: { email, code } — the email pins the attempt counter to a
+  // single user so a failed attempt against one account can't affect others.
+  let user
+  if (token) {
+    user = await User.findOne({ emailVerificationToken: token })
+  } else {
+    if(!email || !isValidEmail(email)){
+      throw new ApiError(400,"A valid email address is required to verify a code")
+    }
+    user = await User.findOne({ email: email.trim().toLowerCase() })
+  }
+
+  if(!user || !user.emailVerificationToken){
     throw new ApiError(400,"Invalid or expired verification token")
+  }
+  // Lockout check FIRST: once VERIFY_OTP_MAX_ATTEMPTS wrong codes have been
+  // consumed, every subsequent OTP attempt — even one carrying the CORRECT
+  // code — is rejected with 429 until a fresh code is issued (any resend
+  // resets the counter). The token is deliberately kept in place so the
+  // client sees a consistent "locked, request a new code" status instead of
+  // a 400 that could be mistaken for a typo. The email-link flow (token)
+  // still works after lockout: it carries the same secret delivered to the
+  // same inbox, so it proves possession just as strongly.
+  if (!token && code && (user.emailVerificationAttempts || 0) >= VERIFY_OTP_MAX_ATTEMPTS) {
+    throw new ApiError(429, "Too many attempts. Request a new code.")
+  }
+  if (code && !token && user.emailVerificationToken !== String(code).trim()) {
+    // Wrong code for this account → count the attempt.
+    const attempts = (user.emailVerificationAttempts || 0) + 1
+    if (attempts >= VERIFY_OTP_MAX_ATTEMPTS) {
+      // Lockout point. 429 (not 400/401) so the frontend can treat this
+      // like any other rate-limit case and offer a resend.
+      user.emailVerificationAttempts = attempts
+      await user.save({ validateBeforeSave: false })
+      throw new ApiError(429, "Too many attempts. Request a new code.")
+    }
+    user.emailVerificationAttempts = attempts
+    await user.save({ validateBeforeSave: false })
+    throw new ApiError(400, "Invalid or expired verification token")
   }
   if(user.emailVerificationTokenExpiry && user.emailVerificationTokenExpiry < new Date()){
     throw new ApiError(400,"Verification token has expired")
@@ -697,12 +831,14 @@ const verifyEmail = asyncHandler(async(req,res)=>{
   user.isEmailVerified = true
   user.emailVerificationToken = ""
   user.emailVerificationTokenExpiry = null
+  user.emailVerificationAttempts = 0
   await user.save({ validateBeforeSave: false })
   return res
     .status(200)
     .json(new ApiResponse(200, { isEmailVerified: true }, "Email verified successfully"))
 })
 
+// Logged-in resend (used by the in-app banner after login).
 const resendVerification = asyncHandler(async(req,res)=>{
   const user = await User.findById(req.user?._id)
   if(!user){
@@ -711,10 +847,33 @@ const resendVerification = asyncHandler(async(req,res)=>{
   if(user.isEmailVerified){
     throw new ApiError(400,"Email is already verified")
   }
-  await sendVerificationEmail(user)
+  await issueVerificationCode(user, { throwOnSend: true })
   return res
     .status(200)
     .json(new ApiResponse(200,{},"Verification email sent. Check your inbox."))
+})
+
+// Pre-login resend for the OTP screen: identified by email only. Always
+// returns a generic 200 for unknown/verified addresses so the endpoint can't
+// be used to enumerate which emails have accounts.
+const resendVerificationCode = asyncHandler(async(req,res)=>{
+  const { email } = req.body
+  if(!email || !isValidEmail(email)){
+    throw new ApiError(400,"A valid email address is required")
+  }
+  const user = await User.findOne({ email: email.trim().toLowerCase() })
+  if(!user || user.isEmailVerified){
+    return res
+      .status(200)
+      .json(new ApiResponse(200,{},"If that email has an unverified account, a new code has been sent."))
+  }
+  // Same issuance path as registration (resets attempts) — plus cooldown and
+  // the per-email rolling resend cap to stop slow-drip abuse of the mail
+  // provider's quota or a real user's inbox.
+  await issueVerificationCode(user, { throwOnSend: true })
+  return res
+    .status(200)
+    .json(new ApiResponse(200,{},"If that email has an unverified account, a new code has been sent."))
 })
 
 const forgotPassword = asyncHandler(async(req,res)=>{
@@ -733,7 +892,13 @@ const forgotPassword = asyncHandler(async(req,res)=>{
   user.passwordResetToken = token
   user.passwordResetTokenExpiry = new Date(Date.now() + RESET_TOKEN_TTL_MS)
   await user.save({ validateBeforeSave: false })
-  await sendMail({
+  // Same pattern as registration's OTP: the token is persisted synchronously
+  // (above) and the mail send runs in the BACKGROUND — a slow or hanging
+  // provider must never delay (or time out) the response. Nothing downstream
+  // depends on the send completing before the 200: the user acts on the link
+  // from their inbox whenever it arrives. There is deliberately no
+  // sendPasswordResetEmail wrapper — forgot-password is the only caller.
+  sendMail({
     to: user.email,
     subject: "Reset your VidOra password",
     text: `Hi ${user.fullname},\n\nYou requested a password reset. Click the link below to choose a new password:\n${getFrontendUrl()}/reset-password?token=${token}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`,
@@ -787,6 +952,7 @@ export { registerUser,
   getSavedVideos,
   verifyEmail,
   resendVerification,
+  resendVerificationCode,
   forgotPassword,
   resetPassword
 

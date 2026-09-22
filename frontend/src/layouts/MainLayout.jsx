@@ -38,7 +38,8 @@ export default function MainLayout() {
     setVerifying(true)
     setVerifyError("")
     try {
-      await api.post("/user/verify-email", { code })
+      // Email scopes the attempt counter to this account (per-email lockout).
+      await api.post("/user/verify-email", { email: user.email, code })
       setJustVerified(true)
       await getCurrentUser()
     } catch (err) {

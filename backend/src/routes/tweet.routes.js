@@ -6,12 +6,12 @@ import {
     updateTweet,
     deleteTweet
 } from "../controllers/tweet.controller.js"
-import { verifyJWT } from "../middlewares/auth.middleware.js"
+import { verifyJWT, requireVerifiedEmail } from "../middlewares/auth.middleware.js"
 
 const router = Router()
 
-
-router.route("/").get(getAllTweets).post(verifyJWT, createTweet)
+// Gated: posts are publicly visible (spam vector).
+router.route("/").get(getAllTweets).post(verifyJWT, requireVerifiedEmail, createTweet)
 router.route("/user/:userId").get(getUserTweets)
 router.route("/:tweetId").patch(verifyJWT, updateTweet).delete(verifyJWT, deleteTweet)
 

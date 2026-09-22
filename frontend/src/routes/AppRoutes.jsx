@@ -21,6 +21,7 @@ const Register      = lazy(() => import("../pages/Register/Register"))
 const ForgotPassword = lazy(() => import("../pages/ForgotPassword/ForgotPassword"))
 const ResetPassword  = lazy(() => import("../pages/ResetPassword/ResetPassword"))
 const VerifyEmail    = lazy(() => import("../pages/VerifyEmail/VerifyEmail"))
+const VerifyOtp      = lazy(() => import("../pages/VerifyOtp/VerifyOtp"))
 const NotFound      = lazy(() => import("../pages/NotFound/NotFound"))
 const Notifications = lazy(() => import("../pages/Notifications/Notifications"))
 const Posts         = lazy(() => import("../pages/Posts/Posts"))
@@ -63,6 +64,7 @@ export default function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/verify-account" element={<VerifyOtp />} />
         <Route path="*"         element={<NotFound />} />
       </Routes>
     </Suspense>

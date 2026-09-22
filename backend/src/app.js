@@ -96,6 +96,7 @@ if (!isTest) {
     
     app.use('/api/v1/user/forgot-password', authLimiter)
     app.use('/api/v1/user/resend-verification', authLimiter)
+    app.use('/api/v1/user/resend-verification-code', authLimiter)
     app.use('/api/v1/user/verify-email', authLimiter)
     app.use('/api', apiLimiter)
 }
@@ -150,6 +151,10 @@ app.use((err, req, res, next) => {
     return res.status(statusCode).json({
         statusCode,
         message,
+        // Machine-readable error code (e.g. EMAIL_NOT_VERIFIED from
+        // requireVerifiedEmail) so clients can branch on error type without
+        // parsing message strings. Absent when the error has no code.
+        code: err.code || undefined,
         success: false
     })
 })

@@ -1,5 +1,6 @@
 import request from "supertest"
 import app from "../src/app.js"
+import { User } from "../src/models/user.model.js"
 
 
 export { TEMP_DIR } from "../src/middlewares/multer.middleware.js"
@@ -32,15 +33,22 @@ export function register(overrides = {}) {
 
 let userCounter = 0
 
-
-
-
+// Registers AND verifies the account's email, so the many suites that create
+// content (videos, comments, tweets…) aren't blocked by requireVerifiedEmail.
+// Verification-related tests use the unverified register() helper directly.
 export async function registerAndLogin(overrides = {}) {
   userCounter += 1
   const email = overrides.email ?? `user${userCounter}@example.com`
   const username = overrides.username ?? `user${userCounter}`
   const password = overrides.password ?? "password123"
   await register({ email, username, password, ...overrides }).expect(201)
+
+  const registered = await User.findOne({ email })
+  if (registered && !registered.isEmailVerified) {
+    registered.isEmailVerified = true
+    await registered.save({ validateBeforeSave: false })
+  }
+
   const login = await request(app)
     .post("/api/v1/user/login")
     .send({ email, password })

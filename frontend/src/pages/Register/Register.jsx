@@ -52,7 +52,9 @@ export default function Register() {
       if (avatar) formData.append("avatar", avatar)
 
       await register(formData)
-      navigate("/login")
+      // New accounts land on the OTP screen — the 6-digit code is already in
+      // their inbox. Login stays available via "Verify later".
+      navigate("/verify-account", { state: { email, fullname }, replace: true })
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Please try again.")
     } finally {

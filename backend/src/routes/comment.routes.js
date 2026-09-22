@@ -5,13 +5,14 @@ import {
     updateComment,
     deleteComment
 } from "../controllers/comment.controller.js"
-import { verifyJWT, optionalAuth } from "../middlewares/auth.middleware.js"
+import { verifyJWT, optionalAuth, requireVerifiedEmail } from "../middlewares/auth.middleware.js"
 
 const router = Router()
 
 
 
-router.route("/:videoId").get(optionalAuth, getVideoComments).post(verifyJWT, addComment)
+// Gated: comments are publicly visible (spam vector).
+router.route("/:videoId").get(optionalAuth, getVideoComments).post(verifyJWT, requireVerifiedEmail, addComment)
 router.route("/c/:commentId").patch(verifyJWT, updateComment).delete(verifyJWT, deleteComment)
 
 export default router 

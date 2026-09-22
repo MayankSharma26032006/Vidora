@@ -9,6 +9,11 @@ import {
     updatePlaylist
 } from "../controllers/playlist.controller.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js"
+// DELIBERATE DECISION: playlist creation (POST /) is NOT gated by
+// requireVerifiedEmail. Unlike videos/comments/posts, playlists are private
+// organizational tools with no public spam surface, so verification adds
+// friction without meaningful protection. Revisit only if playlists ever
+// become publicly shareable.
 
 const router = Router()
 
